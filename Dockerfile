@@ -26,7 +26,7 @@ FROM node:20-slim AS runner
 
 WORKDIR /app
 
-# Install runtime dependencies (python for code execution, git, etc.)
+# Install runtime dependencies (python for code execution, git, sqlite3, etc.)
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
@@ -53,9 +53,6 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
-# Copy prisma CLI for db push
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-
 # Set environment variables for runtime
 ENV WORKSPACE_ROOT=/app/workspace
 ENV DATABASE_URL=file:/app/data/eeshai.db
@@ -63,19 +60,41 @@ ENV DATABASE_URL=file:/app/data/eeshai.db
 # Expose HF Space port
 EXPOSE 7860
 
-# Create startup script that initializes DB before starting
-RUN cat > /app/start.sh << 'EOF'
+# Create startup script that initializes DB with raw SQL before starting
+RUN cat > /app/start.sh << 'SQLEOF'
 #!/bin/sh
 cd /app
 
-# Initialize database
-echo "Initializing database..."
-export DATABASE_URL="file:/app/data/eeshai.db"
-npx prisma db push --skip-generate 2>&1 || echo "DB push failed, continuing..."
+# Initialize SQLite database with schema
+DB_PATH="/app/data/eeshai.db"
+if [ ! -f "$DB_PATH" ] || [ ! -s "$DB_PATH" ]; then
+  echo "Initializing database..."
+  sqlite3 "$DB_PATH" "
+    CREATE TABLE IF NOT EXISTS Conversation (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL DEFAULT 'New Chat',
+      createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS Message (
+      id TEXT PRIMARY KEY,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      thinking TEXT,
+      conversationId TEXT NOT NULL,
+      createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (conversationId) REFERENCES Conversation(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS Message_conversationId_idx ON Message(conversationId);
+  "
+  echo "Database initialized!"
+else
+  echo "Database already exists."
+fi
 
 echo "Eesha AI starting on port 7860..."
 node server.js
-EOF
+SQLEOF
 RUN chmod +x /app/start.sh
 
 CMD ["/app/start.sh"]
