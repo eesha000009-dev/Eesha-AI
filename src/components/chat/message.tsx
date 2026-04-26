@@ -49,7 +49,7 @@ function ThinkingBubble({ thinking, isThinking }: { thinking: string; isThinking
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="ml-2 mt-1 rounded-lg border border-primary/10 bg-primary/[0.03] p-3">
+            <div className="ml-2 mt-1 rounded-lg border border-primary/10 bg-primary/[0.03] p-2 sm:p-3">
               <div className="prose-thinking text-xs leading-relaxed text-muted-foreground">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {thinking}
@@ -101,8 +101,8 @@ export function Message({ message, isStreaming, onRegenerate }: MessageProps) {
         transition={{ duration: 0.25, ease: 'easeOut' }}
         className="flex justify-end"
       >
-        <div className="group relative max-w-[85%] sm:max-w-[70%]">
-          <div className="rounded-2xl rounded-tr-sm bg-gradient-to-br from-violet-600 to-purple-600 px-4 py-2.5 text-sm leading-relaxed text-white shadow-lg shadow-violet-500/10">
+        <div className="group relative max-w-[90%] sm:max-w-[70%]">
+          <div className="rounded-2xl rounded-tr-sm bg-gradient-to-br from-violet-600 to-purple-600 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm leading-relaxed text-white shadow-lg shadow-violet-500/10">
             {message.content}
           </div>
           {/* Hover actions */}
@@ -128,15 +128,15 @@ export function Message({ message, isStreaming, onRegenerate }: MessageProps) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
-      className="group flex gap-3"
+      className="group flex gap-2 sm:gap-3"
     >
       {/* Avatar */}
-      <div className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500/15 to-cyan-500/15 border border-primary/10">
-        <img src="/logo-transparent.png" alt="" className="size-7 object-contain" />
+      <div className="mt-0.5 flex size-8 sm:size-10 shrink-0 items-center justify-center rounded-lg sm:rounded-xl bg-gradient-to-br from-violet-500/15 to-cyan-500/15 border border-primary/10">
+        <img src="/logo-transparent.png" alt="" className="size-5 sm:size-7 object-contain" />
       </div>
 
       {/* Content */}
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 overflow-hidden">
         {isAssistantStreaming ? (
           <ThinkingIndicator />
         ) : (
@@ -148,7 +148,7 @@ export function Message({ message, isStreaming, onRegenerate }: MessageProps) {
 
             {/* Main response content */}
             {message.content && (
-              <div className="border-l-2 border-primary/30 pl-3">
+              <div className="border-l-2 border-primary/30 pl-2 sm:pl-3">
                 <div className="prose-chat">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
@@ -198,7 +198,7 @@ export function Message({ message, isStreaming, onRegenerate }: MessageProps) {
 
         {/* Hover actions */}
         {!isAssistantStreaming && message.content && (
-          <div className="mt-1.5 flex items-center gap-1 pl-5 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="mt-1.5 flex items-center gap-1 pl-2 sm:pl-5 opacity-0 transition-opacity group-hover:opacity-100">
             <Button
               variant="ghost"
               size="icon"
