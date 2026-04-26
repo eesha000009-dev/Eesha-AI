@@ -12,7 +12,7 @@ import { FileExplorer } from '@/components/workspace/file-explorer';
 import { CodeEditor } from '@/components/workspace/code-editor';
 import { TerminalPanel } from '@/components/workspace/terminal';
 import { Button } from '@/components/ui/button';
-import { Code2, Terminal, PanelRight, MessageSquare, LayoutDashboard } from 'lucide-react';
+import { Code2, Terminal, MessageSquare } from 'lucide-react';
 import { SmokyBackground } from '@/components/chat/smoky-background';
 
 type ActivePanel = 'chat' | 'workspace' | 'terminal';
@@ -32,7 +32,6 @@ export default function Home() {
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
   const hasMessages = activeConversation && activeConversation.messages.length > 0;
 
-  const [activePanel, setActivePanel] = useState<ActivePanel>('chat');
   const [showWorkspace, setShowWorkspace] = useState(false);
   const [showTerminal, setShowTerminal] = useState(false);
 
@@ -73,13 +72,14 @@ export default function Home() {
     <div className="flex h-screen bg-background">
       {/* Smoky background effect */}
       <SmokyBackground />
+
       {/* Sidebar */}
       <Sidebar />
 
       {/* Main content */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar with panel toggles */}
-        <div className="flex h-11 items-center justify-between border-b border-border bg-background/80 px-3 backdrop-blur-xl">
+        <div className="flex h-11 items-center justify-between border-b border-border bg-background/80 backdrop-blur-xl px-3">
           <Header />
 
           {/* Panel toggle buttons */}
@@ -87,8 +87,8 @@ export default function Home() {
             <Button
               variant="ghost"
               size="sm"
-              className={`h-7 gap-1.5 text-xs ${activePanel === 'chat' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-              onClick={() => { setActivePanel('chat'); setShowWorkspace(false); setShowTerminal(false); }}
+              className={`h-7 gap-1.5 text-xs ${!showWorkspace && !showTerminal ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              onClick={() => { setShowWorkspace(false); setShowTerminal(false); }}
             >
               <MessageSquare className="size-3" />
               Chat

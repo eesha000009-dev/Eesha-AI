@@ -3,7 +3,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Terminal as TerminalIcon, Send, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface TerminalLine {
   type: 'input' | 'output' | 'error';
@@ -77,17 +76,17 @@ export function TerminalPanel() {
   }, []);
 
   return (
-    <div className="flex h-full flex-col bg-[#0a0a12]">
+    <div className="flex h-full flex-col bg-card">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/[0.06] px-3 py-1.5">
+      <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
         <div className="flex items-center gap-1.5">
-          <TerminalIcon className="size-3 text-emerald-400" />
-          <span className="text-[11px] font-medium text-zinc-400">Terminal</span>
+          <TerminalIcon className="size-3 text-emerald-500" />
+          <span className="text-[11px] font-medium text-muted-foreground">Terminal</span>
         </div>
         <Button
           variant="ghost"
           size="icon"
-          className="size-5 text-zinc-600 hover:text-zinc-300"
+          className="size-5 text-muted-foreground hover:text-foreground"
           onClick={clearTerminal}
         >
           <Trash2 className="size-3" />
@@ -101,23 +100,23 @@ export function TerminalPanel() {
             key={i}
             className={`whitespace-pre-wrap break-all ${
               line.type === 'input'
-                ? 'text-emerald-400'
+                ? 'text-emerald-500'
                 : line.type === 'error'
-                ? 'text-red-400'
-                : 'text-zinc-400'
+                ? 'text-red-500'
+                : 'text-muted-foreground'
             }`}
           >
             {line.content}
           </div>
         ))}
         {isRunning && (
-          <span className="animate-blink-cursor inline-block size-2 bg-emerald-400" />
+          <span className="animate-blink-cursor inline-block size-2 bg-emerald-500" />
         )}
       </div>
 
       {/* Input */}
-      <div className="flex items-center gap-2 border-t border-white/[0.06] px-3 py-2">
-        <span className="text-xs text-emerald-400">$</span>
+      <div className="flex items-center gap-2 border-t border-border px-3 py-2">
+        <span className="text-xs text-emerald-500">$</span>
         <input
           ref={inputRef}
           type="text"
@@ -126,12 +125,12 @@ export function TerminalPanel() {
           onKeyDown={handleKeyDown}
           disabled={isRunning}
           placeholder="Enter command..."
-          className="flex-1 bg-transparent font-mono text-xs text-zinc-200 outline-none placeholder-zinc-700 disabled:opacity-50"
+          className="flex-1 bg-transparent font-mono text-xs text-foreground outline-none placeholder-muted-foreground/50 disabled:opacity-50"
         />
         <Button
           variant="ghost"
           size="icon"
-          className="size-6 text-zinc-500 hover:text-zinc-300"
+          className="size-6 text-muted-foreground hover:text-foreground"
           onClick={() => executeCommand(input)}
           disabled={isRunning || !input.trim()}
         >
