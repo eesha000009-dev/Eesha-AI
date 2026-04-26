@@ -19,10 +19,7 @@ export const metadata: Metadata = {
   keywords: ["Eesha AI", "Kimi K2.5", "AI", "coding assistant", "code generation", "coding agent"],
   authors: [{ name: "Eesha AI" }],
   icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/logo.png", type: "image/png", sizes: "any" },
-    ],
+    icon: "/favicon.svg",
   },
 };
 

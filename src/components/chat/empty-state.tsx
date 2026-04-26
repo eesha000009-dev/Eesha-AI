@@ -77,7 +77,7 @@ export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
 
           {/* Logo */}
           <div className="animate-glow-pulse relative flex size-20 items-center justify-center rounded-2xl border border-white/[0.1] bg-gradient-to-br from-violet-600/20 to-cyan-600/20 shadow-2xl shadow-violet-500/20 backdrop-blur-sm overflow-hidden">
-            <img src="/logo.png" alt="Eesha AI" className="size-14 rounded-lg" />
+            <img src="/logo.svg" alt="Eesha AI" className="size-14" />
           </div>
         </div>
       </motion.div>
