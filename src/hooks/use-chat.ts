@@ -8,6 +8,8 @@ export function useChat() {
     addConversation,
     addMessage,
     updateLastAssistantMessage,
+    appendThinking,
+    setThinkingDone,
     setIsStreaming,
     activeConversationId,
     updateConversationTitle,
@@ -51,6 +53,8 @@ export function useChat() {
         id: `assistant-${Date.now()}`,
         role: 'assistant' as const,
         content: '',
+        thinking: '',
+        isThinking: false,
         createdAt: new Date().toISOString(),
       };
       addMessage(conversationId, assistantMessage);
@@ -87,6 +91,7 @@ export function useChat() {
 
         const decoder = new TextDecoder();
         let fullContent = '';
+        let fullThinking = '';
 
         while (true) {
           const { done, value } = await reader.read();
@@ -101,14 +106,35 @@ export function useChat() {
               if (data === '[DONE]') continue;
               try {
                 const parsed = JSON.parse(data);
-                if (parsed.content) {
+
+                if (parsed.type === 'thinking' && parsed.content) {
+                  fullThinking += parsed.content;
+                  appendThinking(conversationId, parsed.content);
+                }
+
+                if (parsed.type === 'content' && parsed.content) {
+                  // Mark thinking as done when we start receiving content
+                  if (fullThinking) {
+                    setThinkingDone(conversationId);
+                  }
                   fullContent += parsed.content;
                   updateLastAssistantMessage(conversationId, fullContent);
                 }
-                if (parsed.error) setError(parsed.error);
+
+                if (parsed.type === 'error') setError(parsed.content);
+                if (!parsed.type && parsed.content) {
+                  // Fallback for old format
+                  fullContent += parsed.content;
+                  updateLastAssistantMessage(conversationId, fullContent);
+                }
               } catch { /* skip */ }
             }
           }
+        }
+
+        // Ensure thinking is marked as done
+        if (fullThinking) {
+          setThinkingDone(conversationId);
         }
 
         // Update title on first message
@@ -127,6 +153,7 @@ export function useChat() {
       } catch (err: unknown) {
         if (err instanceof Error && err.name === 'AbortError') {
           // cancelled
+          setThinkingDone(conversationId);
         } else {
           const msg = err instanceof Error ? err.message : 'Failed to get response';
           setError(msg);
@@ -134,13 +161,14 @@ export function useChat() {
             conversationId,
             '⚠️ Unable to generate a response. Please check your NVIDIA API key and try again.'
           );
+          setThinkingDone(conversationId);
         }
       } finally {
         setIsStreaming(false);
         abortControllerRef.current = null;
       }
     },
-    [activeConversationId, addConversation, addMessage, updateLastAssistantMessage, setIsStreaming, updateConversationTitle]
+    [activeConversationId, addConversation, addMessage, updateLastAssistantMessage, appendThinking, setThinkingDone, setIsStreaming, updateConversationTitle]
   );
 
   const stopStreaming = useCallback(() => {

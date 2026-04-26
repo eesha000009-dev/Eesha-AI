@@ -159,11 +159,11 @@
 }
 
 @keyframes glow-pulse {
-  0%, 100% { 
+  0%, 100% {
     box-shadow: 0 0 20px rgba(139, 92, 246, 0.3), 0 0 40px rgba(34, 211, 238, 0.15);
     opacity: 0.8;
   }
-  50% { 
+  50% {
     box-shadow: 0 0 30px rgba(139, 92, 246, 0.5), 0 0 60px rgba(34, 211, 238, 0.25);
     opacity: 1;
   }
@@ -196,6 +196,11 @@
   100% { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 /* ===== Animation utility classes ===== */
 
 .animate-blink-cursor {
@@ -225,6 +230,12 @@
 
 .animate-fade-in-up {
   animation: fade-in-up 0.4s ease-out forwards;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.05) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
 }
 
 /* ===== Prose-chat styling for assistant messages ===== */
@@ -335,6 +346,28 @@
 .prose-chat img {
   border-radius: 0.5rem;
   max-width: 100%;
+}
+
+/* ===== Prose-thinking styling for reasoning content ===== */
+
+.prose-thinking {
+  line-height: 1.6;
+}
+
+.prose-thinking p {
+  margin-bottom: 0.5rem;
+}
+
+.prose-thinking p:last-child {
+  margin-bottom: 0;
+}
+
+.prose-thinking code {
+  background: rgba(139, 92, 246, 0.1);
+  color: #c4b5fd;
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.2rem;
+  font-size: 0.75rem;
 }
 
 /* ===== Input glow effect ===== */

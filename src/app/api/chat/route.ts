@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const SYSTEM_PROMPT = `You are Kimi K2.5, an advanced AI coding assistant built by Moonshot AI. You are an expert in software engineering across all programming languages and frameworks.
 
@@ -73,25 +73,27 @@ export async function POST(req: NextRequest) {
     const aiMessages = [
       { role: 'system' as const, content: SYSTEM_PROMPT },
       ...messages.map((m: { role: string; content: string }) => ({
-        role: m.role as 'user' | 'assistant',
+        role: m.role as 'user' | 'assistant' | 'system',
         content: m.content,
       })),
     ];
 
-    // Call NVIDIA API — OpenAI-compatible streaming endpoint
+    // Call NVIDIA API — OpenAI-compatible streaming endpoint with thinking mode
     const nvidiaResponse = await fetch(`${NVIDIA_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${NVIDIA_API_KEY}`,
+        'Accept': 'text/event-stream',
       },
       body: JSON.stringify({
         model: MODEL_ID,
         messages: aiMessages,
         stream: true,
-        temperature: 0.6,
-        top_p: 0.7,
-        max_tokens: 8192,
+        temperature: 1.0,
+        top_p: 1.0,
+        max_tokens: 16384,
+        chat_template_kwargs: { thinking: true },
       }),
     });
 
@@ -99,15 +101,17 @@ export async function POST(req: NextRequest) {
       const errorText = await nvidiaResponse.text();
       console.error(`NVIDIA API error ${nvidiaResponse.status}:`, errorText);
       return new Response(
-        JSON.stringify({ error: `NVIDIA API error: ${nvidiaResponse.status}` }),
+        JSON.stringify({ error: `NVIDIA API error: ${nvidiaResponse.status} - ${errorText.slice(0, 200)}` }),
         { status: nvidiaResponse.status, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
     // Process the OpenAI-compatible streaming response from NVIDIA
+    // With thinking mode, the response can have both `reasoning_content` and `content` in delta
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     let fullResponse = '';
+    let fullThinking = '';
 
     const readableStream = new ReadableStream({
       async start(controller) {
@@ -134,13 +138,26 @@ export async function POST(req: NextRequest) {
 
               try {
                 const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content;
+                const delta = parsed.choices?.[0]?.delta;
 
-                if (content) {
-                  fullResponse += content;
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ content })}\n\n`)
-                  );
+                if (delta) {
+                  // Handle thinking/reasoning content
+                  const reasoningContent = delta.reasoning_content;
+                  const content = delta.content;
+
+                  if (reasoningContent) {
+                    fullThinking += reasoningContent;
+                    controller.enqueue(
+                      encoder.encode(`data: ${JSON.stringify({ type: 'thinking', content: reasoningContent })}\n\n`)
+                    );
+                  }
+
+                  if (content) {
+                    fullResponse += content;
+                    controller.enqueue(
+                      encoder.encode(`data: ${JSON.stringify({ type: 'content', content })}\n\n`)
+                    );
+                  }
                 }
               } catch {
                 // Skip malformed JSON
@@ -164,7 +181,7 @@ export async function POST(req: NextRequest) {
         } catch (error) {
           console.error('Streaming error:', error);
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: 'Stream interrupted' })}\n\n`)
+            encoder.encode(`data: ${JSON.stringify({ type: 'error', content: 'Stream interrupted' })}\n\n`)
           );
           controller.close();
         }

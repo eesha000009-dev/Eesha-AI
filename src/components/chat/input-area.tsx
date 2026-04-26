@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Send, Square, Paperclip, Code2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Send, Square, Code2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface InputAreaProps {
@@ -47,21 +48,17 @@ export function InputArea({ onSend, onStop, isStreaming }: InputAreaProps) {
   );
 
   return (
-    <div className="shrink-0 border-t border-white/[0.06] bg-[#0a0a12] px-4 pb-4 pt-3">
+    <div className="shrink-0 border-t border-white/[0.06] bg-gradient-to-t from-[#0a0a12] to-[#0a0a12]/80 px-4 pb-4 pt-3">
       <div className="mx-auto max-w-[768px]">
         {/* Input container */}
-        <div className="input-glow rounded-2xl border border-white/[0.06] bg-white/[0.02] transition-colors focus-within:border-violet-500/30">
+        <div className="input-glow relative rounded-2xl border border-white/[0.08] bg-white/[0.02] transition-all duration-300 focus-within:border-violet-500/30 focus-within:bg-white/[0.03] focus-within:shadow-lg focus-within:shadow-violet-500/5">
           <div className="flex items-end gap-2 p-3">
-            {/* Paperclip button (disabled placeholder) */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 shrink-0 text-zinc-600 opacity-50"
-              disabled
-              title="Attach file (coming soon)"
-            >
-              <Paperclip className="size-4" />
-            </Button>
+            {/* Model indicator */}
+            <div className="mb-0.5 flex items-center gap-1.5 shrink-0">
+              <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600/20 to-cyan-600/20 border border-white/[0.06]">
+                <Code2 className="size-3.5 text-violet-400" />
+              </div>
+            </div>
 
             {/* Textarea */}
             <textarea
@@ -69,43 +66,61 @@ export function InputArea({ onSend, onStop, isStreaming }: InputAreaProps) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask Kimi K2.5 anything about code..."
+              placeholder="Ask Kimi K2.5 to write, debug, or explain code..."
               rows={1}
-              className="max-h-[200px] min-h-[24px] flex-1 resize-none bg-transparent text-sm text-zinc-200 placeholder-zinc-600 outline-none"
+              className="max-h-[200px] min-h-[28px] flex-1 resize-none bg-transparent text-sm leading-relaxed text-zinc-200 placeholder-zinc-600 outline-none"
             />
 
             {/* Send / Stop button */}
-            {isStreaming ? (
-              <Button
-                onClick={onStop}
-                className="size-8 shrink-0 rounded-lg bg-red-600 text-white hover:bg-red-700"
-                size="icon"
-                title="Stop generating"
-              >
-                <Square className="size-3.5" fill="currentColor" />
-              </Button>
-            ) : (
-              <Button
-                onClick={handleSubmit}
-                disabled={!input.trim()}
-                className="size-8 shrink-0 rounded-lg bg-gradient-to-r from-violet-600 to-cyan-600 text-white opacity-90 transition-opacity hover:opacity-100 disabled:opacity-30"
-                size="icon"
-                title="Send message"
-              >
-                <Send className="size-3.5" />
-              </Button>
-            )}
+            <AnimatePresence mode="wait">
+              {isStreaming ? (
+                <motion.div
+                  key="stop"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <Button
+                    onClick={onStop}
+                    className="size-8 shrink-0 rounded-xl bg-red-600/90 text-white shadow-lg shadow-red-500/20 hover:bg-red-600"
+                    size="icon"
+                    title="Stop generating"
+                  >
+                    <Square className="size-3" fill="currentColor" />
+                  </Button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="send"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!input.trim()}
+                    className="size-8 shrink-0 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 text-white shadow-lg shadow-violet-500/20 transition-all hover:shadow-violet-500/40 disabled:opacity-20 disabled:shadow-none"
+                    size="icon"
+                    title="Send message"
+                  >
+                    <Send className="size-3.5" />
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
         {/* Bottom info */}
         <div className="mt-2 flex items-center justify-between px-1">
           <div className="flex items-center gap-1.5">
-            <Code2 className="size-3 text-zinc-600" />
-            <span className="text-[11px] text-zinc-600">Kimi K2.5</span>
+            <Sparkles className="size-3 text-violet-500/50" />
+            <span className="text-[11px] text-zinc-600">Kimi K2.5 with Thinking Mode</span>
           </div>
           <span className="text-[11px] text-zinc-600">
-            Kimi K2.5 can make mistakes. Review code carefully.
+            AI can make mistakes. Review code carefully.
           </span>
         </div>
       </div>

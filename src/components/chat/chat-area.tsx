@@ -12,7 +12,6 @@ interface ChatAreaProps {
 export function ChatArea({ onRegenerate }: ChatAreaProps) {
   const { conversations, activeConversationId, isStreaming } = useChatStore();
   const bottomRef = useRef<HTMLDivElement>(null);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
   const messages = activeConversation?.messages ?? [];

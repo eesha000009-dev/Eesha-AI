@@ -4,6 +4,8 @@ export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  thinking?: string; // Chain-of-thought reasoning from Kimi K2.5
+  isThinking?: boolean; // Currently receiving thinking content
   createdAt?: string;
 }
 
@@ -32,6 +34,8 @@ interface ChatState {
 
   addMessage: (conversationId: string, message: Message) => void;
   updateLastAssistantMessage: (conversationId: string, content: string) => void;
+  appendThinking: (conversationId: string, thinking: string) => void;
+  setThinkingDone: (conversationId: string) => void;
 
   getActiveConversation: () => Conversation | undefined;
 }
@@ -89,6 +93,37 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const lastIdx = messages.length - 1;
         if (lastIdx >= 0 && messages[lastIdx].role === 'assistant') {
           messages[lastIdx] = { ...messages[lastIdx], content };
+        }
+        return { ...c, messages };
+      }),
+    })),
+
+  appendThinking: (conversationId, thinking) =>
+    set((state) => ({
+      conversations: state.conversations.map((c) => {
+        if (c.id !== conversationId) return c;
+        const messages = [...c.messages];
+        const lastIdx = messages.length - 1;
+        if (lastIdx >= 0 && messages[lastIdx].role === 'assistant') {
+          const prev = messages[lastIdx];
+          messages[lastIdx] = {
+            ...prev,
+            thinking: (prev.thinking || '') + thinking,
+            isThinking: true,
+          };
+        }
+        return { ...c, messages };
+      }),
+    })),
+
+  setThinkingDone: (conversationId) =>
+    set((state) => ({
+      conversations: state.conversations.map((c) => {
+        if (c.id !== conversationId) return c;
+        const messages = [...c.messages];
+        const lastIdx = messages.length - 1;
+        if (lastIdx >= 0 && messages[lastIdx].role === 'assistant') {
+          messages[lastIdx] = { ...messages[lastIdx], isThinking: false };
         }
         return { ...c, messages };
       }),
