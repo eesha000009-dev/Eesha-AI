@@ -156,7 +156,7 @@ export default function Home() {
                     <div className="w-44 shrink-0 overflow-hidden"><FileExplorer /></div>
                     <div className="flex-1 min-w-0 overflow-hidden"><CodeEditor /></div>
                   </div>
-                  <div className="h-48 shrink-0 border-t border-white/[0.06] overflow-hidden">
+                  <div className="h-48 shrink-0 border-t border-border overflow-hidden">
                     <TerminalPanel />
                   </div>
                 </>

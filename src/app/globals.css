@@ -46,23 +46,23 @@
 /* ─── Light Mode ──────────────────────────────────────────── */
 :root {
   --radius: 0.625rem;
-  --background: #f8f9fa;
-  --foreground: #18181b;
+  --background: #f5f5fa;
+  --foreground: #1a1a2e;
   --card: #ffffff;
-  --card-foreground: #18181b;
+  --card-foreground: #1a1a2e;
   --popover: #ffffff;
-  --popover-foreground: #18181b;
+  --popover-foreground: #1a1a2e;
   --primary: #7c3aed;
   --primary-foreground: #ffffff;
-  --secondary: #f0f0f5;
-  --secondary-foreground: #18181b;
-  --muted: #f0f0f5;
-  --muted-foreground: #71717a;
-  --accent: #f0f0f5;
-  --accent-foreground: #18181b;
+  --secondary: #edeef5;
+  --secondary-foreground: #1a1a2e;
+  --muted: #edeef5;
+  --muted-foreground: #6b7280;
+  --accent: #edeef5;
+  --accent-foreground: #1a1a2e;
   --destructive: #ef4444;
-  --border: rgba(0, 0, 0, 0.1);
-  --input: rgba(0, 0, 0, 0.08);
+  --border: rgba(0, 0, 0, 0.08);
+  --input: rgba(0, 0, 0, 0.06);
   --ring: #7c3aed;
   --chart-1: #7c3aed;
   --chart-2: #06b6d4;
@@ -70,52 +70,52 @@
   --chart-4: #10b981;
   --chart-5: #f59e0b;
   --sidebar: #ffffff;
-  --sidebar-foreground: #18181b;
+  --sidebar-foreground: #1a1a2e;
   --sidebar-primary: #7c3aed;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(0, 0, 0, 0.04);
-  --sidebar-accent-foreground: #18181b;
-  --sidebar-border: rgba(0, 0, 0, 0.08);
+  --sidebar-accent: rgba(124, 58, 237, 0.06);
+  --sidebar-accent-foreground: #1a1a2e;
+  --sidebar-border: rgba(0, 0, 0, 0.06);
   --sidebar-ring: #7c3aed;
 
-  /* Custom semantic tokens for components */
+  /* Custom semantic tokens for light mode — soft, premium feel */
   --surface-primary: #ffffff;
-  --surface-secondary: #f4f4f8;
-  --surface-tertiary: #ebebf0;
-  --text-primary: #18181b;
-  --text-secondary: #52525b;
-  --text-tertiary: #a1a1aa;
+  --surface-secondary: #f7f7fc;
+  --surface-tertiary: #eeeef5;
+  --text-primary: #1a1a2e;
+  --text-secondary: #4b5563;
+  --text-tertiary: #9ca3af;
   --text-inverse: #ffffff;
-  --border-subtle: rgba(0, 0, 0, 0.06);
-  --border-medium: rgba(0, 0, 0, 0.1);
-  --glow-color: rgba(139, 92, 246, 0.08);
-  --code-bg: rgba(0, 0, 0, 0.05);
-  --code-text: #7c3aed;
-  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
-  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
-  --selection-bg: rgba(139, 92, 246, 0.15);
-  --selection-text: #18181b;
+  --border-subtle: rgba(0, 0, 0, 0.04);
+  --border-medium: rgba(0, 0, 0, 0.08);
+  --glow-color: rgba(124, 58, 237, 0.1);
+  --code-bg: rgba(124, 58, 237, 0.06);
+  --code-text: #6d28d9;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.12);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.2);
+  --selection-bg: rgba(124, 58, 237, 0.12);
+  --selection-text: #1a1a2e;
 }
 
 /* ─── Dark Mode ───────────────────────────────────────────── */
 .dark {
-  --background: #0a0a12;
+  --background: #09090f;
   --foreground: #f4f4f5;
   --card: #0c0c14;
   --card-foreground: #f4f4f5;
   --popover: #0c0c14;
   --popover-foreground: #f4f4f5;
   --primary: #a78bfa;
-  --primary-foreground: #0a0a12;
-  --secondary: #18182b;
+  --primary-foreground: #09090f;
+  --secondary: #16162b;
   --secondary-foreground: #f4f4f5;
-  --muted: #18182b;
+  --muted: #16162b;
   --muted-foreground: #a1a1aa;
-  --accent: #18182b;
+  --accent: #16162b;
   --accent-foreground: #f4f4f5;
   --destructive: #ef4444;
   --border: rgba(255, 255, 255, 0.06);
-  --input: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.06);
   --ring: #a78bfa;
   --chart-1: #a78bfa;
   --chart-2: #22d3ee;
@@ -125,7 +125,7 @@
   --sidebar: #0c0c14;
   --sidebar-foreground: #f4f4f5;
   --sidebar-primary: #a78bfa;
-  --sidebar-primary-foreground: #0a0a12;
+  --sidebar-primary-foreground: #09090f;
   --sidebar-accent: rgba(255, 255, 255, 0.04);
   --sidebar-accent-foreground: #f4f4f5;
   --sidebar-border: rgba(255, 255, 255, 0.06);
@@ -133,19 +133,19 @@
 
   /* Custom semantic tokens */
   --surface-primary: #0c0c14;
-  --surface-secondary: #12121e;
-  --surface-tertiary: #18182b;
+  --surface-secondary: #111122;
+  --surface-tertiary: #16162b;
   --text-primary: #f4f4f5;
   --text-secondary: #a1a1aa;
   --text-tertiary: #71717a;
-  --text-inverse: #0a0a12;
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-medium: rgba(255, 255, 255, 0.1);
-  --glow-color: rgba(139, 92, 246, 0.12);
-  --code-bg: rgba(255, 255, 255, 0.07);
+  --text-inverse: #09090f;
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-medium: rgba(255, 255, 255, 0.08);
+  --glow-color: rgba(139, 92, 246, 0.15);
+  --code-bg: rgba(255, 255, 255, 0.06);
   --code-text: #67e8f9;
-  --scrollbar-thumb: rgba(255, 255, 255, 0.08);
-  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.14);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.06);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.12);
   --selection-bg: rgba(139, 92, 246, 0.3);
   --selection-text: #f4f4f5;
 }
@@ -197,11 +197,11 @@
 
 @keyframes glow-pulse {
   0%, 100% {
-    box-shadow: 0 0 20px var(--glow-color), 0 0 40px rgba(34, 211, 238, 0.1);
-    opacity: 0.8;
+    box-shadow: 0 0 20px var(--glow-color), 0 0 40px rgba(34, 211, 238, 0.08);
+    opacity: 0.7;
   }
   50% {
-    box-shadow: 0 0 30px var(--glow-color), 0 0 60px rgba(34, 211, 238, 0.2);
+    box-shadow: 0 0 35px var(--glow-color), 0 0 70px rgba(34, 211, 238, 0.15);
     opacity: 1;
   }
 }
@@ -438,6 +438,15 @@
   border-color: rgba(139, 92, 246, 0.2);
 }
 
+/* Light mode sidebar active */
+:root .sidebar-item-active {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(6, 182, 212, 0.05));
+}
+
+.dark .sidebar-item-active {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(34, 211, 238, 0.08));
+}
+
 /* ===== Suggestion card ===== */
 .suggestion-card {
   position: relative;
@@ -486,4 +495,22 @@
   font-size: 0.75rem !important;
   min-width: 2.5em !important;
   padding-right: 1em !important;
+}
+
+/* ===== Light mode specific enhancements ===== */
+:root .suggestion-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+:root .suggestion-card:hover {
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* ===== Dark mode specific enhancements ===== */
+.dark .suggestion-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.dark .suggestion-card:hover {
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.12), 0 2px 4px rgba(0, 0, 0, 0.4);
 }

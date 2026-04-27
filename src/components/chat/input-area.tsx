@@ -47,15 +47,16 @@ export function InputArea({ onSend, onStop, isStreaming }: InputAreaProps) {
   );
 
   return (
-    <div className="shrink-0 border-t border-border bg-gradient-to-t from-background to-background/80 px-4 pb-4 pt-3">
+    <div className="shrink-0 border-t border-border bg-gradient-to-t from-background via-background/95 to-background/80 px-4 pb-4 pt-3">
       <div className="mx-auto max-w-[768px]">
         {/* Input container */}
         <div className="input-glow relative rounded-2xl border border-border bg-[var(--surface-secondary)] transition-all duration-300 focus-within:border-primary/30 focus-within:bg-[var(--surface-tertiary)] focus-within:shadow-lg focus-within:shadow-primary/5">
           <div className="flex items-end gap-2 p-3">
-            {/* Model indicator */}
+            {/* Model indicator with glow */}
             <div className="mb-0.5 flex items-center gap-1.5 shrink-0">
-              <div className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600/20 to-cyan-600/20 border border-border">
-                <Code2 className="size-3.5 text-primary" />
+              <div className="relative flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600/20 to-cyan-600/20 border border-border overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 to-cyan-500/10" />
+                <Code2 className="relative size-3.5 text-primary" />
               </div>
             </div>
 
