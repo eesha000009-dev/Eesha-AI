@@ -129,7 +129,7 @@ export function TerminalPanel() {
   }, [focusInput]);
 
   return (
-    <div className="flex h-full flex-col bg-card" onClick={focusInput}>
+    <div className="flex h-full flex-col bg-white/30 dark:bg-black/40 backdrop-blur-sm" onClick={focusInput}>
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
         <div className="flex items-center gap-1.5">
@@ -156,7 +156,7 @@ export function TerminalPanel() {
       {/* Output area */}
       <div
         ref={scrollRef}
-        className="relative flex-1 overflow-auto p-3 font-mono text-[12px] leading-[1.7] bg-[var(--surface-secondary)]"
+        className="relative flex-1 overflow-auto p-3 font-mono text-[12px] leading-[1.7] bg-transparent"
         style={{ minHeight: 0 }}
       >
         <LogoWatermark opacity={0.04} sizeFraction={0.45} />
@@ -184,7 +184,7 @@ export function TerminalPanel() {
       </div>
 
       {/* Input area */}
-      <div className="flex items-center gap-2 border-t border-border px-3 py-2 bg-card">
+      <div className="flex items-center gap-2 border-t border-border px-3 py-2 bg-white/30 dark:bg-black/30">
         <span className="text-xs text-emerald-600 dark:text-emerald-400 shrink-0">$</span>
         <input
           ref={inputRef}
