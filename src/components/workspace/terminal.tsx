@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Terminal as TerminalIcon, Send, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWorkspaceStore } from '@/stores/workspace-store';
+import { LogoWatermark } from '@/components/chat/logo-watermark';
 
 interface TerminalLine {
   type: 'input' | 'output' | 'error' | 'system';
@@ -155,9 +156,10 @@ export function TerminalPanel() {
       {/* Output area */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-auto p-3 font-mono text-[12px] leading-[1.7] bg-[var(--surface-secondary)]"
+        className="relative flex-1 overflow-auto p-3 font-mono text-[12px] leading-[1.7] bg-[var(--surface-secondary)]"
         style={{ minHeight: 0 }}
       >
+        <LogoWatermark opacity={0.04} sizeFraction={0.45} />
         {lines.map((line, i) => (
           <div
             key={i}
