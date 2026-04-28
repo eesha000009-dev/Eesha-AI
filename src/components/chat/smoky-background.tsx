@@ -250,7 +250,8 @@ export function SmokyBackground() {
 
       // ─── THE LOGO — HUGE, semi-transparent, DRAMATIC ───
       if (logoImg) {
-        const logoSize = Math.min(w, h) * 0.6;
+        // Use Math.max so logo stays large on mobile (portrait) too
+        const logoSize = Math.max(w, h) * 0.5;
         const logoX = cx - logoSize / 2;
         const logoY = cy - logoSize / 2;
 
