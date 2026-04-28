@@ -58,7 +58,21 @@ export function CodeEditor() {
   if (openFiles.length === 0) {
     return (
       <div className="relative flex h-full flex-col items-center justify-center bg-white/20 dark:bg-black/20 backdrop-blur-sm text-muted-foreground overflow-hidden">
-        {/* No logo here — the SmokyBackground canvas provides the background logo watermark */}
+        {/* Background logo watermark — always visible, content overlays it */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <img
+            src="/logo-transparent.png"
+            alt=""
+            className="object-contain animate-breathe-slow select-none"
+            style={{
+              maxWidth: '60%',
+              maxHeight: '60%',
+              opacity: 0.07,
+              filter: 'brightness(1.4) saturate(1.3)',
+            }}
+          />
+        </div>
+        {/* Content overlays the logo */}
         <div className="relative z-10 flex flex-col items-center gap-4">
           <div className="text-center">
             <h2 className="text-xl font-semibold bg-gradient-to-r from-violet-500 via-cyan-400 to-violet-500 bg-clip-text text-transparent">
@@ -128,10 +142,24 @@ export function CodeEditor() {
         </div>
       )}
 
-      {/* Editor area — SmokyBackground canvas provides logo watermark */}
+      {/* Editor area — with persistent logo watermark in background */}
       {activeFile && (
         <div className="relative flex-1 min-h-0">
-          {/* Code content */}
+          {/* Background logo watermark — always visible behind code */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <img
+              src="/logo-transparent.png"
+              alt=""
+              className="object-contain animate-breathe-slow select-none"
+              style={{
+                maxWidth: '60%',
+                maxHeight: '60%',
+                opacity: 0.07,
+                filter: 'brightness(1.4) saturate(1.3)',
+              }}
+            />
+          </div>
+          {/* Code content overlays the logo */}
           <div className="absolute inset-0 flex overflow-hidden relative z-10">
             {/* Line numbers */}
             <div className="w-12 select-none overflow-hidden border-r border-border bg-[var(--surface-secondary)] py-3 text-right font-mono text-[11px] leading-[1.6] text-muted-foreground shrink-0">
