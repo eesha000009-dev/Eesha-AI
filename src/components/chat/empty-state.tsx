@@ -49,7 +49,7 @@ const suggestions = [
 export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-4 py-8 relative z-10">
-      {/* Greeting — the logo watermark is visible in the background behind this */}
+      {/* Greeting — the huge logo watermark is visible in the canvas background */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -81,7 +81,7 @@ export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
         <span className="text-xs text-[var(--text-tertiary)]">NVIDIA H100s</span>
       </motion.div>
 
-      {/* Suggestion Cards */}
+      {/* Suggestion Cards — positioned below center to not block logo watermark */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
