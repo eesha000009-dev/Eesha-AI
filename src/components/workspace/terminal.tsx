@@ -152,27 +152,28 @@ export function TerminalPanel() {
         </Button>
       </div>
 
-      {/* Output area */}
+      {/* Output area — logo is ALWAYS in background, content overlays it */}
       <div
         ref={scrollRef}
         className="relative flex-1 overflow-auto p-3 font-mono text-[12px] leading-[1.7] bg-transparent"
         style={{ minHeight: 0 }}
       >
-        {lines.length <= 4 && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <img
-              src="/logo-transparent.png"
-              alt=""
-              className="object-contain animate-breathe-slow select-none"
-              style={{
-                maxWidth: '50%',
-                maxHeight: '50%',
-                opacity: 0.06,
-                filter: 'brightness(1.3) saturate(1.2)',
-              }}
-            />
-          </div>
-        )}
+        {/* Persistent background logo watermark — always visible, content types over it */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <img
+            src="/logo-transparent.png"
+            alt=""
+            className="object-contain animate-breathe-slow select-none"
+            style={{
+              maxWidth: '60%',
+              maxHeight: '60%',
+              opacity: 0.07,
+              filter: 'brightness(1.4) saturate(1.3)',
+            }}
+          />
+        </div>
+        {/* Terminal content overlays the logo */}
+        <div className="relative z-10">
         {lines.map((line, i) => (
           <div
             key={i}
@@ -194,6 +195,7 @@ export function TerminalPanel() {
             <span className="inline-block size-2 animate-pulse bg-emerald-500" />
           </div>
         )}
+        </div>{/* end z-10 content wrapper */}
       </div>
 
       {/* Input area */}
