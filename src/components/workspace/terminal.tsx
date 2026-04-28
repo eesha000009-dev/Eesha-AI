@@ -158,21 +158,8 @@ export function TerminalPanel() {
         className="relative flex-1 overflow-auto p-3 font-mono text-[12px] leading-[1.7] bg-transparent"
         style={{ minHeight: 0 }}
       >
-        {/* Persistent background logo watermark — always visible, content types over it */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <img
-            src="/logo-transparent.png"
-            alt=""
-            className="object-contain animate-breathe-slow select-none"
-            style={{
-              maxWidth: '60%',
-              maxHeight: '60%',
-              opacity: 0.07,
-              filter: 'brightness(1.4) saturate(1.3)',
-            }}
-          />
-        </div>
-        {/* Terminal content overlays the logo */}
+        {/* No logo here — SmokyBackground canvas provides the watermark */}
+        {/* Terminal content */}
         <div className="relative z-10">
         {lines.map((line, i) => (
           <div
