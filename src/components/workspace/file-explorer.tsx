@@ -92,7 +92,7 @@ export function FileExplorer() {
   }, [currentPath, refreshFiles]);
 
   return (
-    <div className="flex h-full flex-col border-r border-border bg-sidebar">
+    <div className="flex h-full flex-col border-r border-white/5 dark:border-white/5 bg-white/50 dark:bg-black/40 backdrop-blur-sm">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Explorer</span>
         <div className="flex items-center gap-0.5">
