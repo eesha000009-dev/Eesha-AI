@@ -456,10 +456,9 @@
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(34, 211, 238, 0.08));
 }
 
-/* ===== Suggestion card ===== */
+/* ===== Suggestion card — glass morphism ===== */
 .suggestion-card {
   position: relative;
-  background: var(--surface-primary);
   border-radius: 0.75rem;
   overflow: hidden;
 }
@@ -470,7 +469,7 @@
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(34, 211, 238, 0.3), rgba(139, 92, 246, 0.1));
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.4), rgba(34, 211, 238, 0.4), rgba(139, 92, 246, 0.2));
   background-size: 200% 200%;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -508,11 +507,11 @@
 
 /* ===== Light mode specific enhancements ===== */
 :root .suggestion-card {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 :root .suggestion-card:hover {
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.12), 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 
 /* ===== Dark mode specific enhancements ===== */
@@ -521,5 +520,12 @@
 }
 
 .dark .suggestion-card:hover {
-  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.12), 0 2px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15), 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* ===== Input glow — stronger for dark mode ===== */
+.input-glow::before {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.6), rgba(34, 211, 238, 0.6), rgba(139, 92, 246, 0.3));
+  background-size: 200% 200%;
+  animation: gradient-border 3s ease infinite;
 }
