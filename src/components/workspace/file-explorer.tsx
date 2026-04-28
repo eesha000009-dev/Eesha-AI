@@ -5,7 +5,6 @@ import { Folder, File, ChevronRight, ChevronDown, RefreshCw, Plus, FolderPlus, B
 import { useWorkspaceStore, FileEntry } from '@/stores/workspace-store';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LogoWatermark } from '@/components/chat/logo-watermark';
 
 function getFileIcon(entry: FileEntry) {
   if (entry.type === 'directory') return <Folder className="size-3.5 shrink-0 text-violet-500" />;
@@ -139,8 +138,13 @@ export function FileExplorer() {
             <FileTreeItem key={entry.path} entry={entry} depth={0} />
           ))}
           {files.length === 0 && (
-            <div className="relative px-3 py-6 text-center text-[11px] text-muted-foreground">
-              <LogoWatermark opacity={0.04} sizeFraction={0.8} />
+            <div className="relative flex flex-col items-center justify-center py-10 text-[11px] text-muted-foreground">
+              <img
+                src="/logo-transparent.png"
+                alt=""
+                className="size-16 object-contain opacity-10 mb-3 animate-breathe-slow"
+                style={{ filter: 'brightness(1.3) saturate(1.2)' }}
+              />
               Empty directory
             </div>
           )}
