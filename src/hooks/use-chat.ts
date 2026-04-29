@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useChatStore } from '@/stores/chat-store';
 import { useWorkspaceStore } from '@/stores/workspace-store';
+import { useSession } from 'next-auth/react';
 
 export function useChat() {
   const {
@@ -18,9 +19,12 @@ export function useChat() {
   } = useChatStore();
 
   const refreshFiles = useWorkspaceStore((s) => s.refreshFiles);
+  const { data: session } = useSession();
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const FREE_TIER_MAX = 5;
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -78,6 +82,18 @@ export function useChat() {
       abortControllerRef.current = new AbortController();
 
       try {
+        // ── Track free credits for anonymous users ──────────────────
+        if (!session?.user) {
+          const currentCredits = useChatStore.getState().freeCreditsUsed;
+          if (currentCredits >= FREE_TIER_MAX) {
+            useChatStore.getState().setShowLoginPrompt(true);
+            setIsStreaming(false);
+            setError('FREE_LIMIT_REACHED');
+            return;
+          }
+          useChatStore.getState().incrementFreeCredits();
+        }
+
         const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -88,16 +104,18 @@ export function useChat() {
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
 
-          // ── Handle free tier limit reached ────────────────────────────
+              // ── Handle free tier limit reached — show AuthModal ────────
           if (errData.error === 'FREE_LIMIT_REACHED') {
             setDeliberating(conversationId, false);
             updateLastAssistantMessage(
               conversationId,
-              `You've used all ${errData.creditsMax || 5} free messages! 🎉\n\nSign in to get **unlimited access** to Eesha AI:\n- Unlimited chat messages\n- Workspace & file management\n- Terminal access\n- Conversation history saved\n\n[Click here to sign in →](/login)`
+              `You've used all ${errData.creditsMax || FREE_TIER_MAX} free messages! Sign in for unlimited access to Eesha AI. Click **Log in** or **Sign up** in the header to continue.`
             );
             setIsStreaming(false);
             resetAgentStatuses(conversationId);
             setError('FREE_LIMIT_REACHED');
+            // Show the AuthModal immediately
+            useChatStore.getState().setShowLoginPrompt(true);
             return;
           }
 

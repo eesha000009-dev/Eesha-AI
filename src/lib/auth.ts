@@ -45,9 +45,11 @@ export const authOptions: NextAuthOptions = {
   },
 
   // ─── Pages ────────────────────────────────────────────────────────────────
+  // We use a MODAL-based auth flow (like ChatGPT), not a separate login page.
+  // The AuthModal component handles login/signup inline on the main page.
+  // NextAuth defaults to its own built-in sign-in page if needed.
   pages: {
-    signIn: "/login",
-    error: "/login",
+    error: "/",
   },
 
   // ─── Callbacks ────────────────────────────────────────────────────────────

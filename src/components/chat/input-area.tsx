@@ -4,6 +4,8 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Square, Code2, Sparkles, Globe, Paperclip, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useChatStore } from '@/stores/chat-store';
+import { useSession } from 'next-auth/react';
 
 interface InputAreaProps {
   onSend: (content: string) => void;
@@ -15,6 +17,11 @@ export function InputArea({ onSend, onStop, isStreaming }: InputAreaProps) {
   const [input, setInput] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { freeCreditsUsed, setShowLoginPrompt } = useChatStore();
+  const { data: session } = useSession();
+  const FREE_TIER_MAX = 5;
+  const isAuthenticated = !!session?.user;
+  const creditsRemaining = Math.max(0, FREE_TIER_MAX - freeCreditsUsed);
 
   const adjustHeight = useCallback(() => {
     const textarea = textareaRef.current;
@@ -144,9 +151,29 @@ export function InputArea({ onSend, onStop, isStreaming }: InputAreaProps) {
             <Shield className="size-3 text-primary/40" />
             <span className="text-[11px] text-foreground/25">Eesha AI — 3 Agents, 1 Answer</span>
           </div>
-          <span className="text-[11px] text-foreground/25">
-            AI can make mistakes. Review code carefully.
-          </span>
+          <div className="flex items-center gap-3">
+            {!isAuthenticated && creditsRemaining <= 2 && creditsRemaining > 0 && (
+              <button
+                onClick={() => setShowLoginPrompt(true)}
+                className="flex items-center gap-1 text-[11px] text-amber-400/70 hover:text-amber-400 transition-colors"
+              >
+                <Sparkles className="size-3" />
+                {creditsRemaining} free message{creditsRemaining !== 1 ? 's' : ''} left — Sign up
+              </button>
+            )}
+            {!isAuthenticated && creditsRemaining === 0 && (
+              <button
+                onClick={() => setShowLoginPrompt(true)}
+                className="flex items-center gap-1 text-[11px] text-violet-400/80 hover:text-violet-400 transition-colors"
+              >
+                <Sparkles className="size-3" />
+                Sign up for unlimited access
+              </button>
+            )}
+            <span className="text-[11px] text-foreground/25">
+              AI can make mistakes. Review code carefully.
+            </span>
+          </div>
         </div>
       </div>
     </div>

@@ -138,9 +138,10 @@ export async function middleware(request: NextRequest) {
     return addSecurityHeaders(response);
   }
 
-  // ── Always allow the home page and login page ───────────────────────────
+  // ── Always allow the home page and auth routes ────────────────────────
   // This is the "free chat first" model — anyone can visit the site
-  if (pathname === "/" || pathname === "/login" || pathname === "/api/health") {
+  // Auth is handled via MODAL, not a separate login page
+  if (pathname === "/" || pathname.startsWith("/api/auth") || pathname === "/api/health") {
     const response = NextResponse.next();
     return addSecurityHeaders(response);
   }
@@ -210,6 +211,19 @@ export async function middleware(request: NextRequest) {
     const response = NextResponse.next({
       request: { headers: requestHeaders },
     });
+
+    // For anonymous chat requests, update the free credits cookie
+    if (endpointType === "chat" && !isAuthenticated) {
+      const creditsUsed = getFreeCreditsUsed(request);
+      const newCreditsUsed = creditsUsed + 1;
+      response.cookies.set(FREE_TIER_COOKIE, JSON.stringify({ used: newCreditsUsed }), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24, // 24 hours
+        path: "/",
+      });
+    }
 
     return addSecurityHeaders(response);
   }

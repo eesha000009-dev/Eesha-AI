@@ -89,7 +89,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isStreaming: false,
   sidebarOpen: true,
   themeMode: getInitialTheme(),
-  freeCreditsUsed: 0,
+  freeCreditsUsed: typeof window !== 'undefined' ? (() => {
+    try {
+      const match = document.cookie.match(/eesha-free-credits=([^;]+)/);
+      if (match) {
+        const parsed = JSON.parse(decodeURIComponent(match[1]));
+        return parsed.used || 0;
+      }
+    } catch {}
+    return 0;
+  })() : 0,
   showLoginPrompt: false,
 
   setConversations: (conversations) => set({ conversations }),

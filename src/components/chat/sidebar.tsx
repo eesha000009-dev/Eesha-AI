@@ -121,7 +121,7 @@ export function Sidebar() {
   };
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/login' });
+    await signOut({ callbackUrl: '/' });
   };
 
   return (
