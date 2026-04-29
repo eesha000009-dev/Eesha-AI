@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { useChatStore, type AgentName } from '@/stores/chat-store';
+import { useChatStore } from '@/stores/chat-store';
 import { useWorkspaceStore } from '@/stores/workspace-store';
 
 export function useChat() {
@@ -12,11 +12,9 @@ export function useChat() {
     setIsStreaming,
     activeConversationId,
     updateConversationTitle,
-    appendAgentContent,
-    appendAgentThinking,
-    setActiveAgent,
-    setPipelineStatus,
+    setDeliberating,
     setAgentStatus,
+    resetAgentStatuses,
   } = useChatStore();
 
   const refreshFiles = useWorkspaceStore((s) => s.refreshFiles);
@@ -59,9 +57,8 @@ export function useChat() {
         id: `assistant-${Date.now()}`,
         role: 'assistant' as const,
         content: '',
-        agentSections: [],
-        activeAgent: null as AgentName | null,
-        pipelineStatus: null as string | null,
+        isDeliberating: true,
+        agentStatuses: { architect: 'idle', security: 'idle', optimizer: 'idle' } as Record<string, 'idle' | 'working' | 'done' | 'error'>,
         createdAt: new Date().toISOString(),
       };
       addMessage(conversationId, assistantMessage);
@@ -101,10 +98,6 @@ export function useChat() {
         let toolExecuted = false;
         let sseBuffer = '';
 
-        // Track agent contents for building the final fullContent
-        const agentContents: Record<string, string> = { specialist: '', critic: '', judge: '' };
-        let currentAgent: AgentName | null = null;
-
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -124,61 +117,28 @@ export function useChat() {
               const parsed = JSON.parse(data);
               const eventType = parsed.type;
 
-              // ── Multi-agent events ────────────────────────────────────
-
-              if (eventType === 'pipeline_status') {
-                setPipelineStatus(conversationId, parsed.status);
-                if (parsed.message) {
-                  // Optionally display the pipeline message
+              // ── Committee deliberation events ────────────────────────
+              if (eventType === 'deliberation') {
+                if (parsed.status === 'started') {
+                  setDeliberating(conversationId, true);
+                } else if (parsed.status === 'synthesizing') {
+                  // Still deliberating, now synthesizing
+                } else if (parsed.status === 'complete') {
+                  setDeliberating(conversationId, false);
                 }
               }
 
-              if (eventType === 'agent_status') {
-                const agent = parsed.agent as AgentName;
-                const status = parsed.status as string;
-                setAgentStatus(conversationId, agent, status as any);
-                setActiveAgent(conversationId, agent);
-
-                if (status === 'thinking' || status === 'generating') {
-                  currentAgent = agent;
-                }
+              if (eventType === 'agent_update') {
+                setAgentStatus(conversationId, parsed.agent, parsed.status);
               }
 
-              if (eventType === 'agent_content') {
-                const agent = parsed.agent as AgentName;
-                const agentContent = parsed.content || '';
-                currentAgent = agent;
-
-                // Append to the specific agent section
-                appendAgentContent(conversationId, agent, agentContent);
-                agentContents[agent] += agentContent;
-
-                // Update the main content with the latest agent content (judge takes priority)
-                // Build fullContent from all agents for backward compatibility
-                if (agent === 'judge') {
-                  // The judge's content becomes the primary response
-                  fullContent = agentContents.judge;
-                  updateLastAssistantMessage(conversationId, fullContent);
-                } else if (!agentContents.judge) {
-                  // While no judge content yet, show combined
-                  fullContent = buildCombinedContent(agentContents);
-                  updateLastAssistantMessage(conversationId, fullContent);
-                }
-              }
-
-              if (eventType === 'agent_thinking') {
-                const agent = parsed.agent as AgentName;
-                const thinkingContent = parsed.content || '';
-                appendAgentThinking(conversationId, agent, thinkingContent);
-              }
-
-              // ── Legacy events (tool handling) ─────────────────────────
-
+              // ── Final answer streaming ───────────────────────────────
               if (eventType === 'content' && parsed.content) {
                 fullContent += parsed.content;
                 updateLastAssistantMessage(conversationId, fullContent);
               }
 
+              // ── Tool execution events ────────────────────────────────
               if (eventType === 'tool_start') {
                 toolExecuted = true;
                 const toolLabel = getToolLabel(parsed.tool, parsed.path, parsed.command);
@@ -192,10 +152,12 @@ export function useChat() {
                 updateLastAssistantMessage(conversationId, fullContent);
               }
 
+              // ── Error ────────────────────────────────────────────────
               if (eventType === 'error') {
                 console.error('Stream error:', parsed.content);
+                setDeliberating(conversationId, false);
                 if (fullContent) {
-                  fullContent += `\n\n*Note: There was an issue with the response. Some content may be incomplete.*`;
+                  fullContent += `\n\n*Note: There was an issue. Some content may be incomplete.*`;
                   updateLastAssistantMessage(conversationId, fullContent);
                 } else {
                   fullContent = 'I encountered an issue processing your request. Please try again.';
@@ -246,11 +208,12 @@ export function useChat() {
         }
       } finally {
         setIsStreaming(false);
-        setActiveAgent(conversationId, null);
+        setDeliberating(conversationId, false);
+        resetAgentStatuses(conversationId);
         abortControllerRef.current = null;
       }
     },
-    [activeConversationId, addConversation, addMessage, updateLastAssistantMessage, setIsStreaming, updateConversationTitle, refreshFiles, appendAgentContent, appendAgentThinking, setActiveAgent, setPipelineStatus, setAgentStatus]
+    [activeConversationId, addConversation, addMessage, updateLastAssistantMessage, setIsStreaming, updateConversationTitle, refreshFiles, setDeliberating, setAgentStatus, resetAgentStatuses]
   );
 
   const stopStreaming = useCallback(() => {
@@ -263,17 +226,6 @@ export function useChat() {
 }
 
 // ─── Helper functions ─────────────────────────────────────────────────────────
-
-function buildCombinedContent(agentContents: Record<string, string>): string {
-  const parts: string[] = [];
-  if (agentContents.specialist) {
-    parts.push(`---\n🟦 **Specialist Draft**\n---\n${agentContents.specialist}`);
-  }
-  if (agentContents.critic) {
-    parts.push(`---\n🟧 **Critic Review**\n---\n${agentContents.critic}`);
-  }
-  return parts.join('\n\n');
-}
 
 function getToolLabel(tool: string, filePath: string, command: string): string {
   switch (tool) {

@@ -142,7 +142,7 @@ export function InputArea({ onSend, onStop, isStreaming }: InputAreaProps) {
         <div className="mt-2 flex items-center justify-between px-1">
           <div className="flex items-center gap-1.5">
             <Shield className="size-3 text-primary/40" />
-            <span className="text-[11px] text-foreground/25">Eesha AI — Committee of AI</span>
+            <span className="text-[11px] text-foreground/25">Eesha AI — 3 Agents, 1 Answer</span>
           </div>
           <span className="text-[11px] text-foreground/25">
             AI can make mistakes. Review code carefully.

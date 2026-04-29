@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Code2, Zap, Globe, BookOpen, Rocket, Lightbulb, Cpu, Shield, Sparkles, Eye, Scale } from 'lucide-react';
+import { Code2, Zap, Globe, BookOpen, Rocket, Lightbulb, ShieldCheck, Sparkles, ShieldAlert } from 'lucide-react';
 
 interface EmptyStateProps {
   onSuggestionClick?: (text: string) => void;
@@ -37,8 +37,6 @@ const suggestions = [
 export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-4 py-8 relative" style={{ zIndex: 2 }}>
-      {/* No logo here — the SmokyBackground canvas provides the background logo watermark */}
-
       <div className="flex flex-col items-center w-full max-w-lg">
 
         {/* Greeting */}
@@ -52,11 +50,11 @@ export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
             What do you want to build?
           </h2>
           <p className="text-sm text-[var(--text-tertiary)] max-w-md mx-auto">
-            Eesha AI can write, debug, and deploy code — now powered by a Committee of AI agents that draft, critique, and refine every answer.
+            Three expert AI agents collaborate in parallel — an Architect codes, a Security Expert audits, and an Optimizer refines — delivering one secure, production-ready answer.
           </p>
         </motion.div>
 
-        {/* Model badge — committee chips */}
+        {/* Committee agent badges */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -64,24 +62,24 @@ export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
           className="mb-5 flex flex-wrap items-center justify-center gap-1.5"
         >
           <div className="flex items-center gap-1.5 rounded-full border border-white/10 dark:border-white/10 bg-white/10 dark:bg-white/5 backdrop-blur-md px-3 py-1">
-            <Shield className="size-3 text-blue-400" />
+            <ShieldCheck className="size-3 text-primary" />
             <span className="text-[11px] text-foreground/70">Committee of AI</span>
           </div>
           <div className="flex items-center gap-1.5 rounded-full border border-white/10 dark:border-white/10 bg-blue-500/10 backdrop-blur-md px-2.5 py-1">
             <Sparkles className="size-2.5 text-blue-400" />
-            <span className="text-[11px] text-blue-400/80">Specialist</span>
+            <span className="text-[11px] text-blue-400/80">Architect</span>
+          </div>
+          <div className="flex items-center gap-1.5 rounded-full border border-white/10 dark:border-white/10 bg-red-500/10 backdrop-blur-md px-2.5 py-1">
+            <ShieldAlert className="size-2.5 text-red-400" />
+            <span className="text-[11px] text-red-400/80">Security</span>
           </div>
           <div className="flex items-center gap-1.5 rounded-full border border-white/10 dark:border-white/10 bg-amber-500/10 backdrop-blur-md px-2.5 py-1">
-            <Eye className="size-2.5 text-amber-400" />
-            <span className="text-[11px] text-amber-400/80">Critic</span>
-          </div>
-          <div className="flex items-center gap-1.5 rounded-full border border-white/10 dark:border-white/10 bg-emerald-500/10 backdrop-blur-md px-2.5 py-1">
-            <Scale className="size-2.5 text-emerald-400" />
-            <span className="text-[11px] text-emerald-400/80">Judge</span>
+            <Zap className="size-2.5 text-amber-400" />
+            <span className="text-[11px] text-amber-400/80">Optimizer</span>
           </div>
         </motion.div>
 
-        {/* Suggestion chips — compact */}
+        {/* Suggestion chips */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -117,7 +115,7 @@ export function EmptyState({ onSuggestionClick }: EmptyStateProps) {
           <span>Powered by Qwen Coder + Kimi K2 + Mistral Large via NVIDIA API</span>
           <span className="mx-0.5">·</span>
           <Lightbulb className="size-2.5 text-amber-400/30" />
-          <span>Multi-Agent Consensus</span>
+          <span>Parallel Multi-Agent Consensus</span>
         </motion.div>
 
       </div>

@@ -2,25 +2,15 @@ import { create } from 'zustand';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
-export type AgentName = 'specialist' | 'critic' | 'judge';
-
-export interface AgentSection {
-  agent: AgentName;
-  content: string;
-  thinking?: string;
-  isThinking?: boolean;
-  status: 'waiting' | 'thinking' | 'generating' | 'done' | 'error';
-}
-
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   thinking?: string;
   isThinking?: boolean;
-  agentSections?: AgentSection[];
-  activeAgent?: AgentName | null;
-  pipelineStatus?: string | null;
+  // Committee state
+  isDeliberating?: boolean;
+  agentStatuses?: Record<string, 'idle' | 'working' | 'done' | 'error'>;
   createdAt?: string;
 }
 
@@ -54,13 +44,10 @@ interface ChatState {
   appendThinking: (conversationId: string, thinking: string) => void;
   setThinkingDone: (conversationId: string) => void;
 
-  // Multi-agent methods
-  updateAgentSection: (conversationId: string, agent: AgentName, updates: Partial<AgentSection>) => void;
-  appendAgentContent: (conversationId: string, agent: AgentName, content: string) => void;
-  appendAgentThinking: (conversationId: string, agent: AgentName, thinking: string) => void;
-  setActiveAgent: (conversationId: string, agent: AgentName | null) => void;
-  setPipelineStatus: (conversationId: string, status: string | null) => void;
-  setAgentStatus: (conversationId: string, agent: AgentName, status: AgentSection['status']) => void;
+  // Committee methods
+  setDeliberating: (conversationId: string, value: boolean) => void;
+  setAgentStatus: (conversationId: string, agent: string, status: 'idle' | 'working' | 'done' | 'error') => void;
+  resetAgentStatuses: (conversationId: string) => void;
 
   getActiveConversation: () => Conversation | undefined;
 }
@@ -81,41 +68,14 @@ function applyTheme(mode: ThemeMode) {
   if (typeof window === 'undefined') return;
   const dark = window.matchMedia('(prefers-color-scheme: dark)');
   const shouldBeDark = mode === 'dark' || (mode === 'system' && dark.matches);
-
   if (shouldBeDark) {
     document.documentElement.classList.add('dark');
   } else {
     document.documentElement.classList.remove('dark');
   }
-
   try {
     localStorage.setItem('eesha-theme', JSON.stringify({ mode }));
   } catch {}
-}
-
-// Helper: get or create agent section in last assistant message
-function updateAgentSectionsInMessage(
-  messages: Message[],
-  agent: AgentName,
-  updater: (section: AgentSection) => AgentSection,
-): Message[] {
-  const newMessages = [...messages];
-  const lastIdx = newMessages.length - 1;
-  if (lastIdx < 0 || newMessages[lastIdx].role !== 'assistant') return newMessages;
-
-  const msg = { ...newMessages[lastIdx] };
-  const sections = [...(msg.agentSections || [])];
-
-  const existIdx = sections.findIndex(s => s.agent === agent);
-  if (existIdx >= 0) {
-    sections[existIdx] = updater({ ...sections[existIdx] });
-  } else {
-    sections.push(updater({ agent, content: '', thinking: '', status: 'waiting' }));
-  }
-
-  msg.agentSections = sections;
-  newMessages[lastIdx] = msg;
-  return newMessages;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -213,52 +173,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }),
     })),
 
-  // Multi-agent methods
-  updateAgentSection: (conversationId, agent, updates) =>
-    set((state) => ({
-      conversations: state.conversations.map((c) => {
-        if (c.id !== conversationId) return c;
-        return { ...c, messages: updateAgentSectionsInMessage(c.messages, agent, (section) => ({ ...section, ...updates })) };
-      }),
-    })),
-
-  appendAgentContent: (conversationId, agent, content) =>
-    set((state) => ({
-      conversations: state.conversations.map((c) => {
-        if (c.id !== conversationId) return c;
-        return { ...c, messages: updateAgentSectionsInMessage(c.messages, agent, (section) => ({ ...section, content: section.content + content })) };
-      }),
-    })),
-
-  appendAgentThinking: (conversationId, agent, thinking) =>
-    set((state) => ({
-      conversations: state.conversations.map((c) => {
-        if (c.id !== conversationId) return c;
-        return { ...c, messages: updateAgentSectionsInMessage(c.messages, agent, (section) => ({ ...section, thinking: (section.thinking || '') + thinking, isThinking: true })) };
-      }),
-    })),
-
-  setActiveAgent: (conversationId, agent) =>
+  // Committee methods
+  setDeliberating: (conversationId, value) =>
     set((state) => ({
       conversations: state.conversations.map((c) => {
         if (c.id !== conversationId) return c;
         const messages = [...c.messages];
         const lastIdx = messages.length - 1;
         if (lastIdx >= 0 && messages[lastIdx].role === 'assistant') {
-          messages[lastIdx] = { ...messages[lastIdx], activeAgent: agent };
-        }
-        return { ...c, messages };
-      }),
-    })),
-
-  setPipelineStatus: (conversationId, status) =>
-    set((state) => ({
-      conversations: state.conversations.map((c) => {
-        if (c.id !== conversationId) return c;
-        const messages = [...c.messages];
-        const lastIdx = messages.length - 1;
-        if (lastIdx >= 0 && messages[lastIdx].role === 'assistant') {
-          messages[lastIdx] = { ...messages[lastIdx], pipelineStatus: status };
+          messages[lastIdx] = { ...messages[lastIdx], isDeliberating: value };
         }
         return { ...c, messages };
       }),
@@ -268,7 +191,33 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((state) => ({
       conversations: state.conversations.map((c) => {
         if (c.id !== conversationId) return c;
-        return { ...c, messages: updateAgentSectionsInMessage(c.messages, agent, (section) => ({ ...section, status })) };
+        const messages = [...c.messages];
+        const lastIdx = messages.length - 1;
+        if (lastIdx >= 0 && messages[lastIdx].role === 'assistant') {
+          const prev = messages[lastIdx];
+          messages[lastIdx] = {
+            ...prev,
+            agentStatuses: { ...prev.agentStatuses, [agent]: status },
+          };
+        }
+        return { ...c, messages };
+      }),
+    })),
+
+  resetAgentStatuses: (conversationId) =>
+    set((state) => ({
+      conversations: state.conversations.map((c) => {
+        if (c.id !== conversationId) return c;
+        const messages = [...c.messages];
+        const lastIdx = messages.length - 1;
+        if (lastIdx >= 0 && messages[lastIdx].role === 'assistant') {
+          messages[lastIdx] = {
+            ...messages[lastIdx],
+            agentStatuses: { architect: 'idle', security: 'idle', optimizer: 'idle' },
+            isDeliberating: false,
+          };
+        }
+        return { ...c, messages };
       }),
     })),
 

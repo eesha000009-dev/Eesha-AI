@@ -39,7 +39,6 @@ function runCommand(command: string, cwd?: string): Promise<{ stdout: string; st
 const NVIDIA_BASE_URL = process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1';
 
 // ─── Multi-Agent Configuration ────────────────────────────────────────────────
-// API keys are read from environment variables (set as HF Spaces Secrets)
 const AGENT1_API_KEY = process.env.AGENT1_API_KEY || '';
 const AGENT2_API_KEY = process.env.AGENT2_API_KEY || '';
 const AGENT3_API_KEY = process.env.AGENT3_API_KEY || '';
@@ -48,53 +47,102 @@ const AGENT1_MODEL = 'qwen/qwen3-coder-480b-a35b-instruct';
 const AGENT2_MODEL = 'moonshotai/kimi-k2-thinking';
 const AGENT3_MODEL = 'mistralai/mistral-large-3-675b-instruct-2512';
 
-const AGENT1_SYSTEM_PROMPT = `You are The Specialist, an expert coding AI agent. You are part of a "Committee of AI" multi-agent system for Eesha AI.
+// ─── Agent System Prompts — Teamwork with Security Focus ──────────────────────
 
-Your role is to generate a thorough, accurate initial response to the user's coding question. Be comprehensive and provide well-structured code solutions with clear explanations. Include edge cases and best practices where relevant. If writing code, make it production-ready with proper error handling.
+const ARCHITECT_SYSTEM_PROMPT = `You are The Architect, an elite software engineer and the lead developer of the Eesha AI Committee. You design and write production-ready code.
 
-You are a CODING AGENT — not just a chatbot. When users ask you to build something, you MUST:
-1. Plan your approach briefly
-2. Provide complete, runnable code solutions
-3. Include all necessary imports, setup, and configuration
-4. Consider error handling and edge cases
-5. Follow best practices for the relevant language/framework`;
+When you receive a user request:
+1. Analyze the requirements thoroughly
+2. Design the architecture and plan the implementation
+3. Write complete, runnable, production-grade code
+4. Include ALL necessary files, imports, configuration, and setup
+5. Add comprehensive error handling and input validation
+6. Follow security best practices (OWASP Top 10, input sanitization, least privilege)
+7. Use the MOST SECURE approach — prefer parameterized queries, validated inputs, environment variables for secrets, no hardcoded credentials
 
-const AGENT2_SYSTEM_PROMPT = `You are The Critic, a rigorous code reviewer AI agent. You are part of a "Committee of AI" multi-agent system for Eesha AI.
+You are a CODING AGENT — when asked to build something, you MUST provide actual code that creates files and runs. Always structure your response so that code can be extracted and saved to files.
 
-Your role is to review the Specialist's draft answer for:
-- Bugs, logic errors, or incorrect code
-- Security vulnerabilities or performance issues
-- Missing edge cases or error handling
-- Deviations from best practices or coding standards
-- Incomplete solutions or missing imports
-- Any misleading or incorrect explanations
+When writing code, always consider:
+- Input validation and sanitization
+- Authentication and authorization
+- SQL injection / XSS / CSRF prevention
+- Secure secret management (env vars, never hardcoded)
+- Rate limiting and DoS protection where applicable
+- Proper error messages (no leaking internal details)
+- Dependency security`;
 
-Provide a refined version of the answer that fixes all issues you find. Be specific about what you're changing and why. If the original answer is already excellent, say so and provide minor improvements.`;
+const SECURITY_SYSTEM_PROMPT = `You are The Security Expert, an elite cybersecurity specialist and code auditor on the Eesha AI Committee. You have deep expertise in OWASP, CVE databases, penetration testing, and secure coding.
 
-const AGENT3_SYSTEM_PROMPT = `You are The Judge, the final decision-maker AI agent. You are part of a "Committee of AI" multi-agent system for Eesha AI.
+When you receive a user request along with the Architect's draft:
+1. Perform a thorough security audit of the proposed code
+2. Identify ALL vulnerabilities: SQL injection, XSS, CSRF, SSRF, path traversal, command injection, auth bypass, insecure deserialization, etc.
+3. Check for: hardcoded secrets, insecure defaults, missing rate limits, improper error handling that leaks info, weak crypto, insecure dependencies
+4. Grade the security posture (A-F) and list specific CVE-style findings
+5. Provide the EXACT code fixes for every vulnerability found
+6. If the code is already secure, confirm and suggest hardening improvements
+7. Always prefer defense-in-depth: multiple layers of security controls
 
-Your role is to synthesize the original question, the Specialist's draft, and the Critic's review into a final, polished, definitive answer.
+Your output must be:
+- A SECURITY REPORT with findings ranked by severity (Critical > High > Medium > Low > Info)
+- For each finding: the vulnerable code snippet, why it's dangerous, and the exact fix
+- A final VERDICT: whether the code is safe to ship, needs changes, or must be rewritten`;
 
-Rules:
-- Incorporate valid critiques from the Critic
-- Resolve any disagreements between the Specialist and Critic
-- If the Critic found no issues, polish the Specialist's answer for clarity
-- If the Critic found issues, produce the corrected version
-- Always provide the complete, final answer — never just describe what changed
-- Make the final answer as clear, accurate, and helpful as possible
-- Include complete code blocks where code is needed`;
+const OPTIMIZER_SYSTEM_PROMPT = `You are The Optimizer, an elite performance engineer and code quality specialist on the Eesha AI Committee. You ensure code is not just functional, but optimal.
 
-// ─── Tool definitions for the coding agent functionality ───────────────────────
+When you receive a user request along with the Architect's draft:
+1. Analyze algorithmic complexity (Big-O) — suggest better algorithms where possible
+2. Identify performance bottlenecks: N+1 queries, unnecessary re-renders, memory leaks, blocking I/O
+3. Check code quality: DRY violations, SOLID principles, proper typing, clean architecture
+4. Review edge cases: null/undefined handling, empty arrays, concurrent access, large inputs
+5. Suggest optimizations with measurable impact estimates
+6. Verify the code actually solves the user's problem completely
+7. Ensure cross-platform compatibility and accessibility where relevant
+
+Your output must be:
+- An OPTIMIZATION REPORT with improvements ranked by impact (High > Medium > Low)
+- For each improvement: the current code, why it's suboptimal, and the exact optimized version
+- A final ASSESSMENT: whether the code is production-ready, needs minor tweaks, or needs significant refactoring`;
+
+const SYNTHESIS_SYSTEM_PROMPT = `You are the Synthesizer, the final voice of the Eesha AI Committee. Your job is to combine the work of three expert agents into ONE cohesive, final response.
+
+You receive:
+1. The ARCHITECT's implementation (code + design)
+2. The SECURITY EXPERT's audit (vulnerabilities + fixes)
+3. The OPTIMIZER's review (performance + quality improvements)
+
+You MUST produce a single, unified, final answer that:
+- Incorporates ALL security fixes — no vulnerabilities may remain
+- Includes ALL high-impact optimizations
+- Provides the COMPLETE, FINAL, READY-TO-SHIP code
+- Is organized clearly with proper headings and explanations
+- Includes instructions for running/using the code
+
+CRITICAL RULES:
+- The final code MUST be the Architect's code with ALL security fixes and optimizations applied
+- NEVER ship code with known vulnerabilities
+- If security and optimization conflict, security ALWAYS wins
+- Include ALL files needed to run the project
+- If the user asked to create/edit/delete files, output them in clear file blocks using this format:
+
+---FILE: path/to/file.ext---
+(file content here)
+---END FILE---
+
+- Be concise in explanations — focus on the final deliverable
+- The user should be able to copy your code and run it immediately`;
+
+// ─── Tool definitions ─────────────────────────────────────────────────────────
+
 const TOOLS = [
   {
     type: 'function' as const,
     function: {
       name: 'create_file',
-      description: 'Create or overwrite a file in the workspace. Creates parent directories automatically. Use this to write code, config files, or any text content.',
+      description: 'Create or overwrite a file in the workspace. Creates parent directories automatically.',
       parameters: {
         type: 'object',
         properties: {
-          path: { type: 'string', description: 'Relative file path from workspace root, e.g. "src/index.ts"' },
+          path: { type: 'string', description: 'Relative file path from workspace root' },
           content: { type: 'string', description: 'Full file content to write' },
         },
         required: ['path', 'content'],
@@ -105,7 +153,7 @@ const TOOLS = [
     type: 'function' as const,
     function: {
       name: 'edit_file',
-      description: 'Edit an existing file by replacing a specific string with a new string. The old string must match exactly. Use this for targeted edits rather than rewriting entire files.',
+      description: 'Edit an existing file by replacing a specific string with a new string.',
       parameters: {
         type: 'object',
         properties: {
@@ -121,7 +169,7 @@ const TOOLS = [
     type: 'function' as const,
     function: {
       name: 'read_file',
-      description: 'Read the contents of a file from the workspace. Returns the full text content.',
+      description: 'Read the contents of a file from the workspace.',
       parameters: {
         type: 'object',
         properties: {
@@ -135,7 +183,7 @@ const TOOLS = [
     type: 'function' as const,
     function: {
       name: 'delete_file',
-      description: 'Delete a file or directory from the workspace. Use with caution - this action cannot be undone.',
+      description: 'Delete a file or directory from the workspace.',
       parameters: {
         type: 'object',
         properties: {
@@ -149,11 +197,11 @@ const TOOLS = [
     type: 'function' as const,
     function: {
       name: 'list_dir',
-      description: 'List contents of a directory in the workspace. Shows files and subdirectories.',
+      description: 'List contents of a directory in the workspace.',
       parameters: {
         type: 'object',
         properties: {
-          path: { type: 'string', description: 'Relative directory path from workspace root. Use empty string for root.' },
+          path: { type: 'string', description: 'Relative directory path from workspace root' },
         },
         required: [],
       },
@@ -163,11 +211,11 @@ const TOOLS = [
     type: 'function' as const,
     function: {
       name: 'run_command',
-      description: 'Run a shell command in the workspace directory. Use for installing packages, running scripts, git operations, and any system commands. Commands run with a 30-second timeout.',
+      description: 'Run a shell command in the workspace directory.',
       parameters: {
         type: 'object',
         properties: {
-          command: { type: 'string', description: 'Shell command to execute, e.g. "npm install express" or "python main.py"' },
+          command: { type: 'string', description: 'Shell command to execute' },
           cwd: { type: 'string', description: 'Working directory relative to workspace root (optional)' },
         },
         required: ['command'],
@@ -247,142 +295,50 @@ async function executeTool(name: string, args: Record<string, unknown>): Promise
 
 // ─── SSE Helper ───────────────────────────────────────────────────────────────
 
-function sseEvent(type: string, data: Record<string, unknown>): string {
+function sse(type: string, data: Record<string, unknown>): string {
   return `data: ${JSON.stringify({ type, ...data })}\n\n`;
 }
 
-// ─── Agent 1: The Specialist (Qwen Coder via OpenAI SDK compatible API) ──────
+// ─── NVIDIA API Streaming Helper ──────────────────────────────────────────────
 
-async function runAgent1Specialist(
-  userMessages: Array<{ role: string; content: string }>,
-  controller: WritableStreamDefaultController,
-  encoder: TextEncoder,
+async function callNvidiaAPI(
+  model: string,
+  apiKey: string,
+  messages: Array<{ role: string; content: string }>,
+  options: {
+    temperature?: number;
+    top_p?: number;
+    max_tokens?: number;
+    frequency_penalty?: number;
+    presence_penalty?: number;
+  } = {},
 ): Promise<string> {
-  // Send agent status
-  controller.enqueue(encoder.encode(sseEvent('agent_status', { agent: 'specialist', status: 'thinking' })));
-
-  const messages = [
-    { role: 'system', content: AGENT1_SYSTEM_PROMPT },
-    ...userMessages,
-  ];
-
   const response = await fetch(`${NVIDIA_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${AGENT1_API_KEY}`,
+      'Authorization': `Bearer ${apiKey}`,
       'Accept': 'text/event-stream',
     },
     body: JSON.stringify({
-      model: AGENT1_MODEL,
+      model,
       messages,
-      temperature: 0.7,
-      top_p: 0.8,
-      max_tokens: 4096,
       stream: true,
+      temperature: options.temperature ?? 0.6,
+      top_p: options.top_p ?? 0.8,
+      max_tokens: options.max_tokens ?? 8192,
+      ...(options.frequency_penalty != null && { frequency_penalty: options.frequency_penalty }),
+      ...(options.presence_penalty != null && { presence_penalty: options.presence_penalty }),
     }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`Agent 1 (Specialist) API error ${response.status}: ${errorText.slice(0, 500)}`);
-    controller.enqueue(encoder.encode(sseEvent('agent_status', { agent: 'specialist', status: 'error' })));
-    return `[Specialist Error: API returned ${response.status}]`;
+    throw new Error(`NVIDIA API error ${response.status}: ${errorText.slice(0, 300)}`);
   }
-
-  // Send agent status — now generating
-  controller.enqueue(encoder.encode(sseEvent('agent_status', { agent: 'specialist', status: 'generating' })));
 
   const reader = response.body?.getReader();
-  if (!reader) return '';
-
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let fullContent = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed || !trimmed.startsWith('data: ')) continue;
-      const data = trimmed.slice(6);
-      if (data === '[DONE]') continue;
-
-      try {
-        const parsed = JSON.parse(data);
-        const content = parsed.choices?.[0]?.delta?.content;
-        if (content) {
-          fullContent += content;
-          // Stream to frontend with agent label
-          controller.enqueue(encoder.encode(sseEvent('agent_content', {
-            agent: 'specialist',
-            content,
-          })));
-        }
-      } catch { /* skip */ }
-    }
-  }
-
-  controller.enqueue(encoder.encode(sseEvent('agent_status', { agent: 'specialist', status: 'done' })));
-  return fullContent;
-}
-
-// ─── Agent 2: The Critic (Kimi K2 Thinking) ──────────────────────────────────
-
-async function runAgent2Critic(
-  userMessages: Array<{ role: string; content: string }>,
-  specialistDraft: string,
-  controller: WritableStreamDefaultController,
-  encoder: TextEncoder,
-): Promise<{ content: string; reasoning: string }> {
-  // Send agent status
-  controller.enqueue(encoder.encode(sseEvent('agent_status', { agent: 'critic', status: 'thinking' })));
-
-  const userQuestion = userMessages.filter(m => m.role === 'user').map(m => m.content).join('\n');
-
-  const messages = [
-    { role: 'system', content: AGENT2_SYSTEM_PROMPT },
-    {
-      role: 'user',
-      content: `**Original User Question:**\n${userQuestion}\n\n**Specialist's Draft Answer:**\n${specialistDraft}\n\nPlease review the Specialist's draft above. Identify any errors, inefficiencies, missing edge cases, or improvements. Provide your refined version.`,
-    },
-  ];
-
-  const response = await fetch(`${NVIDIA_BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${AGENT2_API_KEY}`,
-      'Accept': 'text/event-stream',
-    },
-    body: JSON.stringify({
-      model: AGENT2_MODEL,
-      messages,
-      temperature: 1,
-      top_p: 0.9,
-      max_tokens: 16384,
-      stream: true,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`Agent 2 (Critic) API error ${response.status}: ${errorText.slice(0, 500)}`);
-    controller.enqueue(encoder.encode(sseEvent('agent_status', { agent: 'critic', status: 'error' })));
-    return { content: `[Critic Error: API returned ${response.status}]`, reasoning: '' };
-  }
-
-  // Send agent status — now generating
-  controller.enqueue(encoder.encode(sseEvent('agent_status', { agent: 'critic', status: 'generating' })));
-
-  const reader = response.body?.getReader();
-  if (!reader) return { content: '', reasoning: '' };
+  if (!reader) throw new Error('No response body');
 
   const decoder = new TextDecoder();
   let buffer = '';
@@ -407,139 +363,53 @@ async function runAgent2Critic(
         const parsed = JSON.parse(data);
         const choice = parsed.choices?.[0];
         if (!choice) continue;
-
         const delta = choice.delta;
 
-        // Capture reasoning_content (chain of thought) — send as thinking to frontend
-        const reasoning = delta?.reasoning_content;
-        if (reasoning) {
-          fullReasoning += reasoning;
-          // Send reasoning as thinking to frontend (collapsible)
-          controller.enqueue(encoder.encode(sseEvent('agent_thinking', {
-            agent: 'critic',
-            content: reasoning,
-          })));
+        // Capture reasoning (Kimi K2 thinking model)
+        if (delta?.reasoning_content) {
+          fullReasoning += delta.reasoning_content;
         }
-
-        // Capture actual content
         if (delta?.content) {
           fullContent += delta.content;
-          // Stream to frontend with agent label
-          controller.enqueue(encoder.encode(sseEvent('agent_content', {
-            agent: 'critic',
-            content: delta.content,
-          })));
         }
       } catch { /* skip */ }
     }
   }
 
-  controller.enqueue(encoder.encode(sseEvent('agent_status', { agent: 'critic', status: 'done' })));
-  return { content: fullContent, reasoning: fullReasoning };
-}
-
-// ─── Agent 3: The Judge (Mistral Large via HTTP requests) ─────────────────────
-
-async function runAgent3Judge(
-  userMessages: Array<{ role: string; content: string }>,
-  specialistDraft: string,
-  criticContent: string,
-  controller: WritableStreamDefaultController,
-  encoder: TextEncoder,
-): Promise<string> {
-  // Send agent status
-  controller.enqueue(encoder.encode(sseEvent('agent_status', { agent: 'judge', status: 'thinking' })));
-
-  const userQuestion = userMessages.filter(m => m.role === 'user').map(m => m.content).join('\n');
-
-  const messages = [
-    { role: 'system', content: AGENT3_SYSTEM_PROMPT },
-    {
-      role: 'user',
-      content: `**Original User Question:**\n${userQuestion}\n\n**Specialist's Draft Answer:**\n${specialistDraft}\n\n**Critic's Review:**\n${criticContent}\n\nBased on the original question, the Specialist's draft, and the Critic's review, produce the final, polished, definitive answer. Incorporate valid critiques and resolve any disagreements.`,
-    },
-  ];
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${AGENT3_API_KEY}`,
-    'Accept': 'text/event-stream',
-  };
-
-  const payload = {
-    model: AGENT3_MODEL,
-    messages,
-    max_tokens: 2048,
-    temperature: 0.15,
-    top_p: 1.00,
-    frequency_penalty: 0.00,
-    presence_penalty: 0.00,
-    stream: true,
-  };
-
-  const response = await fetch(`${NVIDIA_BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`Agent 3 (Judge) API error ${response.status}: ${errorText.slice(0, 500)}`);
-    controller.enqueue(encoder.encode(sseEvent('agent_status', { agent: 'judge', status: 'error' })));
-    return `[Judge Error: API returned ${response.status}]`;
-  }
-
-  // Send agent status — now generating
-  controller.enqueue(encoder.encode(sseEvent('agent_status', { agent: 'judge', status: 'generating' })));
-
-  const reader = response.body?.getReader();
-  if (!reader) return '';
-
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let fullContent = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed || !trimmed.startsWith('data: ')) continue;
-      const data = trimmed.slice(6);
-      if (data === '[DONE]') continue;
-
-      try {
-        const parsed = JSON.parse(data);
-        const content = parsed.choices?.[0]?.delta?.content;
-        if (content) {
-          fullContent += content;
-          // Stream to frontend with agent label
-          controller.enqueue(encoder.encode(sseEvent('agent_content', {
-            agent: 'judge',
-            content,
-          })));
-        }
-      } catch { /* skip */ }
-    }
-  }
-
-  controller.enqueue(encoder.encode(sseEvent('agent_status', { agent: 'judge', status: 'done' })));
   return fullContent;
 }
 
-// ─── Tool execution from Agent 1 content ──────────────────────────────────────
+// ─── File Block Parser ────────────────────────────────────────────────────────
+// Extracts ---FILE: path--- blocks from the synthesis output and executes them
+
+interface FileBlock {
+  path: string;
+  content: string;
+}
+
+function parseFileBlocks(text: string): { files: FileBlock[]; cleanText: string } {
+  const files: FileBlock[] = [];
+  const regex = /---FILE:\s*(.+?)---\n([\s\S]*?)---END FILE---/g;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    files.push({
+      path: match[1].trim(),
+      content: match[2].replace(/\n$/, ''),
+    });
+  }
+
+  // Remove file blocks from the displayed text
+  const cleanText = text.replace(regex, '').replace(/\n{3,}/g, '\n\n').trim();
+  return { files, cleanText };
+}
+
+// ─── Tool Call Parser (legacy ```tool blocks) ────────────────────────────────
 
 function parseToolCallsFromText(text: string): { toolCalls: { name: string; args: Record<string, unknown> }[]; cleanText: string } {
   const toolCalls: { name: string; args: Record<string, unknown> }[] = [];
   let cleanText = text;
 
-  // Format 1: ```tool JSON blocks
   const regex1 = /```tool\s*\n([\s\S]*?)\n```/g;
   let match;
   while ((match = regex1.exec(text)) !== null) {
@@ -552,7 +422,7 @@ function parseToolCallsFromText(text: string): { toolCalls: { name: string; args
     } catch { /* skip */ }
   }
 
-  // Format 2: Kimi native <|tool_call_begin|> format
+  // Kimi native format
   const regex2 = /<\|tool_call_begin\|>\s*functions\.(\w+):\d+\s*<\|tool_call_argument_begin\|>\s*([\s\S]*?)<\|tool_call_end\|>/g;
   while ((match = regex2.exec(text)) !== null) {
     try {
@@ -563,7 +433,6 @@ function parseToolCallsFromText(text: string): { toolCalls: { name: string; args
     } catch { /* skip */ }
   }
 
-  // Clean up remaining tool markers
   cleanText = cleanText
     .replace(/<\|tool_calls_section_begin\|>/g, '')
     .replace(/<\|tool_call_begin\|>[\s\S]*?<\|tool_call_end\|>/g, '')
@@ -574,42 +443,7 @@ function parseToolCallsFromText(text: string): { toolCalls: { name: string; args
   return { toolCalls, cleanText };
 }
 
-// ─── Execute tools from specialist draft and send results to frontend ─────────
-
-async function executeToolsFromDraft(
-  draftContent: string,
-  controller: WritableStreamDefaultController,
-  encoder: TextEncoder,
-): Promise<string> {
-  const { toolCalls, cleanText } = parseToolCallsFromText(draftContent);
-
-  if (toolCalls.length === 0) return cleanText;
-
-  for (const tc of toolCalls) {
-    controller.enqueue(encoder.encode(sseEvent('tool_start', {
-      tool: tc.name,
-      path: (tc.args.path as string) || '',
-      command: (tc.args.command as string) || '',
-    })));
-
-    const result = await executeTool(tc.name, tc.args);
-
-    controller.enqueue(encoder.encode(sseEvent('tool_result', {
-      tool: tc.name,
-      result,
-    })));
-  }
-
-  return cleanText;
-}
-
-// ─── Main POST handler ───────────────────────────────────────────────────────
-
-interface CollectedToolCall {
-  id: string;
-  name: string;
-  arguments: string;
-}
+// ─── Main POST Handler — Parallel Round Table Architecture ────────────────────
 
 export async function POST(req: NextRequest) {
   try {
@@ -645,99 +479,152 @@ export async function POST(req: NextRequest) {
       } catch (dbError) { console.error('Failed to update title:', dbError); }
     }
 
-    // Build user messages array
     const userMessages: Array<{ role: string; content: string }> = messages.map((m: { role: string; content: string }) => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
     }));
 
+    const userQuestion = userMessages.filter(m => m.role === 'user').map(m => m.content).join('\n');
+
     const encoder = new TextEncoder();
-    let fullResponse = '';
 
     const readableStream = new ReadableStream({
       async start(controller) {
         try {
-          // ── Step 1: Agent 1 — The Specialist ──────────────────────────────
-          controller.enqueue(encoder.encode(sseEvent('pipeline_status', { status: 'specialist', message: 'Committee deliberating — Specialist is drafting...' })));
+          // ━━━ PHASE 1: PARALLEL DELIBERATION ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          // All 3 agents work simultaneously — no waiting for each other
+          controller.enqueue(encoder.encode(sse('deliberation', { status: 'started' })));
 
-          let specialistDraft = '';
-          try {
-            specialistDraft = await runAgent1Specialist(userMessages, controller, encoder);
-          } catch (err) {
-            console.error('Agent 1 error:', err);
-            specialistDraft = '';
-            controller.enqueue(encoder.encode(sseEvent('agent_content', {
-              agent: 'specialist',
-              content: '\n*Specialist encountered an error. Proceeding with available input.*\n\n',
+          // Run all 3 agents in parallel with Promise.allSettled
+          const [architectResult, securityResult, optimizerResult] = await Promise.allSettled([
+            // Agent 1: The Architect
+            (async () => {
+              controller.enqueue(encoder.encode(sse('agent_update', { agent: 'architect', status: 'working' })));
+              const content = await callNvidiaAPI(AGENT1_MODEL, AGENT1_API_KEY, [
+                { role: 'system', content: ARCHITECT_SYSTEM_PROMPT },
+                ...userMessages,
+              ], { temperature: 0.7, top_p: 0.8, max_tokens: 8192 });
+              controller.enqueue(encoder.encode(sse('agent_update', { agent: 'architect', status: 'done' })));
+              return content;
+            })(),
+
+            // Agent 2: The Security Expert
+            (async () => {
+              controller.enqueue(encoder.encode(sse('agent_update', { agent: 'security', status: 'working' })));
+              // Security expert reviews the question directly — it doesn't need to wait for Architect
+              const content = await callNvidiaAPI(AGENT2_MODEL, AGENT2_API_KEY, [
+                { role: 'system', content: SECURITY_SYSTEM_PROMPT },
+                {
+                  role: 'user',
+                  content: `Analyze this coding request for security considerations:\n\n${userQuestion}\n\nProvide a proactive security analysis: what vulnerabilities commonly appear in code for this type of request? What security patterns MUST be applied? What should the code AVOID doing? Give specific, actionable security requirements that must be met in the final implementation.`,
+                },
+              ], { temperature: 1, top_p: 0.9, max_tokens: 8192 });
+              controller.enqueue(encoder.encode(sse('agent_update', { agent: 'security', status: 'done' })));
+              return content;
+            })(),
+
+            // Agent 3: The Optimizer
+            (async () => {
+              controller.enqueue(encoder.encode(sse('agent_update', { agent: 'optimizer', status: 'working' })));
+              const content = await callNvidiaAPI(AGENT3_MODEL, AGENT3_API_KEY, [
+                { role: 'system', content: OPTIMIZER_SYSTEM_PROMPT },
+                {
+                  role: 'user',
+                  content: `Analyze this coding request for optimization considerations:\n\n${userQuestion}\n\nProvide a proactive optimization analysis: what performance pitfalls commonly occur? What algorithms and data structures are best? What edge cases must be handled? What code quality standards should the final implementation meet? Give specific, actionable requirements.`,
+                },
+              ], { temperature: 0.15, top_p: 1.0, max_tokens: 4096, frequency_penalty: 0, presence_penalty: 0 });
+              controller.enqueue(encoder.encode(sse('agent_update', { agent: 'optimizer', status: 'done' })));
+              return content;
+            })(),
+          ]);
+
+          // Extract results (use empty string for failed agents)
+          const architectDraft = architectResult.status === 'fulfilled' ? architectResult.value : '';
+          const securityAnalysis = securityResult.status === 'fulfilled' ? securityResult.value : '';
+          const optimizerAnalysis = optimizerResult.status === 'fulfilled' ? optimizerResult.value : '';
+
+          if (!architectDraft && !securityAnalysis && !optimizerAnalysis) {
+            controller.enqueue(encoder.encode(sse('error', { content: 'All agents failed. Please try again.' })));
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            controller.close();
+            return;
+          }
+
+          // ━━━ PHASE 2: SYNTHESIS — One fast call combines everything ━━━━━━━━
+          controller.enqueue(encoder.encode(sse('deliberation', { status: 'synthesizing' })));
+
+          const synthesisContent = await callNvidiaAPI(AGENT1_MODEL, AGENT1_API_KEY, [
+            { role: 'system', content: SYNTHESIS_SYSTEM_PROMPT },
+            {
+              role: 'user',
+              content: `**User's Request:**\n${userQuestion}\n\n**The Architect's Implementation:**\n${architectDraft || '(Architect failed — design from scratch)'}\n\n**Security Expert's Analysis:**\n${securityAnalysis || '(Security expert failed — apply standard security practices)'}\n\n**Optimizer's Analysis:**\n${optimizerAnalysis || '(Optimizer failed — apply standard best practices)'}\n\nSynthesize all three perspectives into ONE final, complete, production-ready answer. Apply ALL security fixes and high-impact optimizations. Output any files using the ---FILE: path--- format for automatic creation.`,
+            },
+          ], { temperature: 0.3, top_p: 0.9, max_tokens: 8192 });
+
+          controller.enqueue(encoder.encode(sse('deliberation', { status: 'complete' })));
+
+          // ━━━ PHASE 3: STREAM FINAL ANSWER + EXECUTE FILES ━━━━━━━━━━━━━━━━━━
+          // Parse file blocks and execute them
+          const { files, cleanText } = parseFileBlocks(synthesisContent);
+
+          // Execute file creation
+          for (const file of files) {
+            controller.enqueue(encoder.encode(sse('tool_start', {
+              tool: 'create_file',
+              path: file.path,
+              command: '',
+            })));
+
+            const result = await executeTool('create_file', { path: file.path, content: file.content });
+
+            controller.enqueue(encoder.encode(sse('tool_result', {
+              tool: 'create_file',
+              result,
             })));
           }
 
-          // Execute any tools found in the specialist draft
-          if (specialistDraft) {
-            const cleanedDraft = await executeToolsFromDraft(specialistDraft, controller, encoder);
-            fullResponse += cleanedDraft;
-          }
+          // Also check for legacy ```tool blocks
+          const { toolCalls, cleanText: finalCleanText } = parseToolCallsFromText(cleanText);
 
-          // ── Step 2: Agent 2 — The Critic ─────────────────────────────────
-          controller.enqueue(encoder.encode(sseEvent('pipeline_status', { status: 'critic', message: 'Committee deliberating — Critic is reviewing...' })));
+          for (const tc of toolCalls) {
+            controller.enqueue(encoder.encode(sse('tool_start', {
+              tool: tc.name,
+              path: (tc.args.path as string) || '',
+              command: (tc.args.command as string) || '',
+            })));
 
-          let criticResult = { content: '', reasoning: '' };
-          try {
-            criticResult = await runAgent2Critic(userMessages, specialistDraft, controller, encoder);
-          } catch (err) {
-            console.error('Agent 2 error:', err);
-            criticResult = { content: '', reasoning: '' };
-            controller.enqueue(encoder.encode(sseEvent('agent_content', {
-              agent: 'critic',
-              content: '\n*Critic encountered an error. Proceeding with Specialist draft.*\n\n',
+            const result = await executeTool(tc.name, tc.args);
+
+            controller.enqueue(encoder.encode(sse('tool_result', {
+              tool: tc.name,
+              result,
             })));
           }
 
-          // ── Step 3: Agent 3 — The Judge ───────────────────────────────────
-          controller.enqueue(encoder.encode(sseEvent('pipeline_status', { status: 'judge', message: 'Committee deliberating — Judge is delivering final answer...' })));
+          // Stream the final clean response to the frontend
+          const finalResponse = finalCleanText || synthesisContent;
 
-          let judgeFinal = '';
-          try {
-            // If critic failed but specialist succeeded, use specialist draft as critic input
-            const criticInput = criticResult.content || specialistDraft;
-            judgeFinal = await runAgent3Judge(userMessages, specialistDraft, criticInput, controller, encoder);
-          } catch (err) {
-            console.error('Agent 3 error:', err);
-            judgeFinal = '';
-            controller.enqueue(encoder.encode(sseEvent('agent_content', {
-              agent: 'judge',
-              content: '\n*Judge encountered an error. Providing best available response.*\n\n',
-            })));
+          // Stream in chunks for smooth UX
+          const CHUNK_SIZE = 8;
+          for (let i = 0; i < finalResponse.length; i += CHUNK_SIZE) {
+            const chunk = finalResponse.slice(i, i + CHUNK_SIZE);
+            controller.enqueue(encoder.encode(sse('content', { content: chunk })));
           }
 
-          // If judge succeeded, the final response is the judge's output.
-          // If judge failed but critic succeeded, use critic's output.
-          // If both failed, use specialist's output.
-          if (judgeFinal) {
-            fullResponse = judgeFinal;
-          } else if (criticResult.content) {
-            fullResponse = criticResult.content;
-          } else {
-            fullResponse = specialistDraft || 'I encountered an issue processing your request. Please try again.';
-          }
-
-          // Save assistant response to database
-          if (conversationId && fullResponse && isDatabaseAvailable()) {
+          // Save to database
+          if (conversationId && finalResponse && isDatabaseAvailable()) {
             try {
-              await db.message.create({ data: { role: 'assistant', content: fullResponse, conversationId } });
+              await db.message.create({ data: { role: 'assistant', content: finalResponse, conversationId } });
               await db.conversation.update({ where: { id: conversationId }, data: { updatedAt: new Date() } });
             } catch (dbError) { console.error('Failed to save assistant message:', dbError); }
           }
-
-          // Signal pipeline completion
-          controller.enqueue(encoder.encode(sseEvent('pipeline_status', { status: 'complete', message: 'Committee has reached consensus.' })));
 
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));
           controller.close();
         } catch (error) {
           console.error('Streaming error:', error);
           try {
-            controller.enqueue(encoder.encode(sseEvent('error', { content: 'Stream interrupted. Please try again.' })));
+            controller.enqueue(encoder.encode(sse('error', { content: 'Stream interrupted. Please try again.' })));
           } catch { /* controller already closed */ }
           controller.close();
         }
