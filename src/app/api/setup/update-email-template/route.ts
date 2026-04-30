@@ -103,18 +103,16 @@ export async function POST(request: NextRequest) {
     // Add hostaddr parameter to bypass DNS resolution
     const dbHost = 'db.xydfeerrrtlgrxmtepjo.supabase.co';
     
+    // Disable TLS verification for this connection only (Supabase pooler uses self-signed certs)
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
     // Try connecting with the pooler URL instead (which uses IPv4)
     // But we need session mode, so use the session pooler on port 5432
     const poolerUrl = `postgresql://postgres.xydfeerrrtlgrxmtepjo:${encodeURIComponent('hLz0TXpX16Gzj9EK')}@aws-0-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require`;
 
     const pool = new pg.Pool({
       connectionString: poolerUrl,
-      ssl: {
-        rejectUnauthorized: false,
-        // Allow self-signed certs from Supabase
-        ca: undefined,
-        checkServerIdentity: () => undefined,
-      },
+      ssl: { rejectUnauthorized: false },
     });
 
     try {
@@ -147,6 +145,8 @@ export async function POST(request: NextRequest) {
       results.push(`Connection failed: ${e.message}`);
     } finally {
       await pool.end();
+      // Re-enable TLS verification
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '1';
     }
 
     return NextResponse.json({
