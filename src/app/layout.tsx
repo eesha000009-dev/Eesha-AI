@@ -50,25 +50,14 @@ export default function RootLayout({
             visibility: hidden;
           }
           #eesha-splash img {
-            width: 120px;
-            height: 120px;
+            width: 200px;
+            height: auto;
             object-fit: contain;
             animation: splash-breathe 2s ease-in-out infinite;
             filter: brightness(1.3) saturate(1.2);
           }
-          #eesha-splash .splash-text {
-            margin-top: 20px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            font-size: 24px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #a78bfa, #22d3ee);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: splash-text-fade 1.5s ease-in-out infinite alternate;
-          }
           #eesha-splash .splash-sub {
-            margin-top: 8px;
+            margin-top: 16px;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 12px;
             color: #71717a;
@@ -78,10 +67,6 @@ export default function RootLayout({
           @keyframes splash-breathe {
             0%, 100% { opacity: 0.7; transform: scale(1); }
             50% { opacity: 1; transform: scale(1.06); }
-          }
-          @keyframes splash-text-fade {
-            0% { opacity: 0.6; }
-            100% { opacity: 1; }
           }
 
           html:not(.dark) #eesha-splash {
@@ -137,7 +122,6 @@ export default function RootLayout({
         {/* Splash screen — pure HTML/CSS, removed by JS after mount */}
         <div id="eesha-splash">
           <img src="/logo-transparent.png" alt="Eesha AI" />
-          <div className="splash-text">Eesha AI</div>
           <div className="splash-sub">LOADING</div>
         </div>
         <script dangerouslySetInnerHTML={{ __html: `

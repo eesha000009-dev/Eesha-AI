@@ -57,12 +57,9 @@ function LoginForm() {
       <div className="relative z-10 w-full max-w-md">
         {/* Logo and branding */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600/20 to-cyan-600/20 p-3 backdrop-blur-sm border border-white/10">
-            <img src="/logo-transparent.png" alt="Eesha AI" className="size-10 object-contain" />
+          <div className="mx-auto mb-4 flex items-center justify-center">
+            <img src="/logo-transparent.png" alt="Eesha AI" className="h-14 w-auto object-contain" />
           </div>
-          <h1 className="text-2xl font-bold text-white">
-            Welcome to <span className="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">Eesha AI</span>
-          </h1>
           <p className="mt-2 text-sm text-zinc-400">
             Sign in to access your AI coding workspace
           </p>

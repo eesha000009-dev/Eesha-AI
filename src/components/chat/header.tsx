@@ -29,9 +29,7 @@ export function Header() {
           >
             <PanelLeft className="size-4" />
           </Button>
-          <span className="bg-gradient-to-r from-violet-500 to-cyan-500 bg-clip-text text-sm font-semibold text-transparent">
-            Eesha AI
-          </span>
+          <img src="/logo-transparent.png" alt="Eesha AI" className="h-6 w-auto object-contain" />
         </>
       )}
       {showTitle && (

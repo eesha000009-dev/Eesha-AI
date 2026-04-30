@@ -382,8 +382,8 @@ export function AuthModal() {
               <div className="relative p-6">
                 {/* Header */}
                 <div className="mb-4 text-center">
-                  <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600/20 to-cyan-600/20 p-2.5 backdrop-blur-sm border border-white/10">
-                    <img src="/logo-transparent.png" alt="Eesha AI" className="size-9 object-contain" />
+                  <div className="mx-auto mb-4 flex items-center justify-center">
+                    <img src="/logo-transparent.png" alt="Eesha AI" className="h-12 w-auto object-contain" />
                   </div>
 
                   {view === 'login' ? (
