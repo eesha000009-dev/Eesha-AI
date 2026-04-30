@@ -109,9 +109,12 @@ export async function POST(request: NextRequest) {
 
     const pool = new pg.Pool({
       connectionString: poolerUrl,
-      ssl: { rejectUnauthorized: false },
-      // Force IPv4
-      host: 'aws-0-us-east-1.pooler.supabase.com',
+      ssl: {
+        rejectUnauthorized: false,
+        // Allow self-signed certs from Supabase
+        ca: undefined,
+        checkServerIdentity: () => undefined,
+      },
     });
 
     try {
