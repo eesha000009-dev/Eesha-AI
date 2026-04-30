@@ -27,7 +27,6 @@ FROM node:20-slim AS runner
 WORKDIR /app
 
 # Install runtime dependencies (python for code execution, git, etc.)
-# NOTE: Removed sqlite3 since we now use Supabase PostgreSQL
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
@@ -55,9 +54,6 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 # Copy pg module for DB migration
 COPY --from=builder /app/node_modules/pg ./node_modules/pg
 
-# Copy SQL migration file
-COPY --from=builder /app/supabase-update-template.sql /app/supabase-update-template.sql
-
 # Set environment variables for runtime
 # NOTE: The following MUST be set as HF Spaces Secrets:
 #   DATABASE_URL, DIRECT_URL — Supabase PostgreSQL connection strings
@@ -72,7 +68,7 @@ ENV WORKSPACE_ROOT=/app/workspace
 EXPOSE 7860
 
 # Create startup script
-RUN cat > /app/start.sh << 'STARTUP'
+RUN cat > /app/start.sh << 'SQLEOF'
 #!/bin/sh
 cd /app
 
@@ -80,46 +76,8 @@ echo "Eesha AI starting on port 7860..."
 echo "Database: PostgreSQL (Supabase)"
 echo "Auth: NextAuth.js"
 
-# Run email template migration (updates Supabase to send OTP codes instead of links)
-echo "Running email template migration..."
-node -e "
-const pg = require('pg');
-const fs = require('fs');
-
-async function migrate() {
-  const directUrl = process.env.DIRECT_URL;
-  if (!directUrl) {
-    console.log('DIRECT_URL not set, skipping email template migration');
-    return;
-  }
-
-  // Disable TLS verification for Supabase pooler
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-
-  const pool = new pg.Pool({ connectionString: directUrl, ssl: { rejectUnauthorized: false } });
-  
-  try {
-    const sql = fs.readFileSync('/app/supabase-update-template.sql', 'utf8');
-    await pool.query(sql);
-    console.log('Email template migration completed successfully!');
-  } catch (e) {
-    console.error('Email template migration failed (non-fatal):', e.message);
-  } finally {
-    await pool.end();
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '1';
-  }
-}
-
-migrate().then(() => {
-  // Start the app
-  require('./server.js');
-});
-" &
-
-# Wait a moment for migration, then start server
-sleep 2
 node server.js
-STARTUP
+SQLEOF
 RUN chmod +x /app/start.sh
 
 CMD ["/app/start.sh"]
