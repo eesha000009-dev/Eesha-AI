@@ -56,9 +56,9 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 # Set environment variables for runtime
 # NOTE: The following MUST be set as HF Spaces Secrets:
 #   DATABASE_URL, DIRECT_URL — Supabase PostgreSQL connection strings
-#   NEXTAUTH_SECRET — NextAuth.js secret key
-#   SUPABASE_URL, SUPABASE_SERVICE_KEY — Supabase Auth (server-side)
-#   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY — Supabase Auth (client-side)
+#   NEXTAUTH_SECRET, NEXTAUTH_URL — NextAuth.js configuration
+#   SUPABASE_URL, SUPABASE_SERVICE_KEY — Supabase Auth admin (server-side only)
+#   SUPABASE_ANON_KEY — Supabase Auth public key (server-side only, NOT NEXT_PUBLIC_)
 #   GITHUB_ID, GITHUB_SECRET — GitHub OAuth
 #   AGENT1_API_KEY, AGENT2_API_KEY, AGENT3_API_KEY — NVIDIA API keys
 ENV WORKSPACE_ROOT=/app/workspace

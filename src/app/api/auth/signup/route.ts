@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createSignupClient, createServerSupabaseClient } from '@/lib/supabase-server';
 
 // ─── Rate limiting for sign-up attempts ──────────────────────────────────────
 const signupAttempts = new Map<string, { count: number; resetTime: number }>();
@@ -27,8 +27,8 @@ function checkSignupRateLimit(ip: string): { allowed: boolean; retryAfter?: numb
 // Steps:
 //   1. Validate input (email, password, policy agreement)
 //   2. Rate limit by IP
-//   3. Create user in Supabase Auth (email + password, email_confirm: false)
-//   4. Supabase automatically sends a verification OTP email
+//   3. Check if user already exists (admin API)
+//   4. Create user via signUp() with anon key (triggers OTP email)
 //   5. Create a corresponding user record in our Prisma database (best-effort)
 //   6. Return success — client will show OTP input
 
@@ -107,20 +107,82 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Supabase Auth: Create user ──────────────────────────────────────────
-    let supabase;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // ── Step 1: Check if user already exists (admin API) ────────────────────
+    let adminClient;
     try {
-      supabase = createServerSupabaseClient();
+      adminClient = createServerSupabaseClient();
     } catch (envError) {
-      console.error('[SIGNUP] Missing Supabase env vars:', envError);
+      console.error('[SIGNUP] Missing Supabase admin env vars:', envError);
       return NextResponse.json(
         { error: 'Server configuration error. Please contact support.' },
         { status: 500 }
       );
     }
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: email.toLowerCase().trim(),
+    const { data: existingUsers, error: lookupError } = await adminClient.auth.admin.listUsers();
+
+    if (lookupError) {
+      console.error('[SIGNUP] User lookup error:', lookupError.message);
+      // Non-fatal — continue with signup attempt
+    } else {
+      const existingUser = existingUsers?.users?.find(
+        (u) => u.email?.toLowerCase() === normalizedEmail
+      );
+
+      if (existingUser) {
+        if (existingUser.email_confirmed_at) {
+          // User exists and is confirmed — tell them to log in
+          return NextResponse.json(
+            { error: 'An account with this email already exists. Please log in instead.' },
+            { status: 409 }
+          );
+        }
+
+        // User exists but email is NOT confirmed — resend OTP
+        console.log('[SIGNUP] User exists but unconfirmed, resending OTP for:', normalizedEmail);
+
+        const signupClient = createSignupClient();
+        const { error: resendError } = await signupClient.auth.resend({
+          type: 'signup',
+          email: normalizedEmail,
+        });
+
+        if (resendError) {
+          console.error('[SIGNUP] Resend OTP error:', resendError.message);
+          return NextResponse.json(
+            { error: 'Could not resend verification code. Please try again.' },
+            { status: 500 }
+          );
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: 'A new verification code has been sent to your email.',
+          email: normalizedEmail,
+          emailConfirmed: false,
+          isResend: true,
+        });
+      }
+    }
+
+    // ── Step 2: Create user via signUp() with ANON key (triggers OTP email) ─
+    // The service role auto-confirms emails and skips OTP — we must use the
+    // anon key so Supabase sends the verification OTP to the user's email.
+    let signupClient;
+    try {
+      signupClient = createSignupClient();
+    } catch (envError) {
+      console.error('[SIGNUP] Missing Supabase anon env vars:', envError);
+      return NextResponse.json(
+        { error: 'Server configuration error. Please contact support.' },
+        { status: 500 }
+      );
+    }
+
+    const { data: authData, error: authError } = await signupClient.auth.signUp({
+      email: normalizedEmail,
       password,
       options: {
         emailRedirectTo: undefined,
@@ -164,15 +226,15 @@ export async function POST(request: NextRequest) {
       try {
         const { db } = await import('@/lib/db');
         const existingUser = await db.user.findUnique({
-          where: { email: email.toLowerCase().trim() },
+          where: { email: normalizedEmail },
         });
 
         if (!existingUser) {
           await db.user.create({
             data: {
               id: authData.user.id,
-              email: email.toLowerCase().trim(),
-              name: email.split('@')[0],
+              email: normalizedEmail,
+              name: normalizedEmail.split('@')[0],
               emailVerified: null,
             },
           });
@@ -185,12 +247,12 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Success ─────────────────────────────────────────────────────────────
-    console.log('[SIGNUP] Success for:', email.toLowerCase().trim(), '| Confirmed:', !!authData.user?.email_confirmed_at);
+    console.log('[SIGNUP] Success for:', normalizedEmail, '| Confirmed:', !!authData.user?.email_confirmed_at);
 
     return NextResponse.json({
       success: true,
       message: 'Account created. A verification code has been sent to your email.',
-      email: email.toLowerCase().trim(),
+      email: normalizedEmail,
       emailConfirmed: authData.user?.email_confirmed_at != null,
     });
 

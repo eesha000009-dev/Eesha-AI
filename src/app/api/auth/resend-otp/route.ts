@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createSignupClient } from '@/lib/supabase-server';
 
 // ─── Rate limiting for resend attempts ────────────────────────────────────────
 const resendAttempts = new Map<string, { count: number; resetTime: number }>();
@@ -44,10 +44,12 @@ export async function POST(request: NextRequest) {
       entry.count++;
     }
 
-    // ── Resend OTP via Supabase ─────────────────────────────────────────────
-    const supabase = createServerSupabaseClient();
+    // ── Resend OTP via Supabase (anon key — triggers OTP email) ─────────────
+    // Must use anon key (not service role) because the service role bypasses
+    // email verification and does not send OTP emails.
+    const signupClient = createSignupClient();
 
-    const { error } = await supabase.auth.resend({
+    const { error } = await signupClient.auth.resend({
       type: 'signup',
       email: emailKey,
     });
