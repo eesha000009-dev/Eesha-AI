@@ -14,7 +14,10 @@ export function createServerSupabaseClient() {
   const key = process.env.SUPABASE_SERVICE_KEY;
 
   if (!url || !key) {
-    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY environment variables');
+    const missing = [];
+    if (!url) missing.push('SUPABASE_URL');
+    if (!key) missing.push('SUPABASE_SERVICE_KEY');
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}. Set these in your HF Space Secrets.`);
   }
 
   return createClient(url, key, {

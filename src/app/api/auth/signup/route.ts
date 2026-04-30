@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
-import { db } from '@/lib/db';
-import crypto from 'crypto';
 
 // ─── Rate limiting for sign-up attempts ──────────────────────────────────────
 const signupAttempts = new Map<string, { count: number; resetTime: number }>();
@@ -29,11 +27,10 @@ function checkSignupRateLimit(ip: string): { allowed: boolean; retryAfter?: numb
 // Steps:
 //   1. Validate input (email, password, policy agreement)
 //   2. Rate limit by IP
-//   3. Check if email already exists in Supabase Auth
-//   4. Create user in Supabase Auth (email + password, email_confirm: false)
-//   5. Supabase automatically sends a verification OTP email
-//   6. Create a corresponding user record in our Prisma database
-//   7. Return success — client will show OTP input
+//   3. Create user in Supabase Auth (email + password, email_confirm: false)
+//   4. Supabase automatically sends a verification OTP email
+//   5. Create a corresponding user record in our Prisma database (best-effort)
+//   6. Return success — client will show OTP input
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,7 +45,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return NextResponse.json(
@@ -64,7 +60,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Password strength requirements
     if (password.length < 8) {
       return NextResponse.json(
         { error: 'Password must be at least 8 characters long.' },
@@ -113,14 +108,22 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Supabase Auth: Create user ──────────────────────────────────────────
-    const supabase = createServerSupabaseClient();
+    let supabase;
+    try {
+      supabase = createServerSupabaseClient();
+    } catch (envError) {
+      console.error('[SIGNUP] Missing Supabase env vars:', envError);
+      return NextResponse.json(
+        { error: 'Server configuration error. Please contact support.' },
+        { status: 500 }
+      );
+    }
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: email.toLowerCase().trim(),
       password,
       options: {
-        // Don't auto-confirm — require OTP verification
-        emailRedirectTo: undefined, // We use OTP, not magic link
+        emailRedirectTo: undefined,
         data: {
           agreed_to_policy: true,
           agreed_at: new Date().toISOString(),
@@ -129,26 +132,37 @@ export async function POST(request: NextRequest) {
     });
 
     if (authError) {
-      // Map Supabase errors to user-friendly messages
-      if (authError.message.includes('already registered') || authError.message.includes('already been registered')) {
+      console.error('[SIGNUP] Supabase auth error:', authError.message, '| Status:', authError.status);
+
+      if (authError.message.includes('already registered') ||
+          authError.message.includes('already been registered') ||
+          authError.message.includes('User already registered')) {
         return NextResponse.json(
           { error: 'An account with this email already exists. Please log in instead.' },
           { status: 409 }
         );
       }
 
-      // Don't leak internal error details
-      console.error('[SIGNUP] Supabase auth error:', authError.message);
+      // Common Supabase Auth errors
+      if (authError.message.includes('Password') && authError.message.includes('weak')) {
+        return NextResponse.json(
+          { error: 'Password is too weak. Please choose a stronger password.' },
+          { status: 400 }
+        );
+      }
+
       return NextResponse.json(
         { error: 'Unable to create account. Please try again.' },
         { status: 500 }
       );
     }
 
-    // ── Create Prisma user record ───────────────────────────────────────────
+    // ── Best-effort: Create Prisma user record ──────────────────────────────
+    // This is not critical — Supabase Auth is the source of truth.
+    // The DB record is for NextAuth/PrismaAdapter compatibility.
     if (authData.user) {
       try {
-        // Check if user already exists in our DB (edge case: duplicate)
+        const { db } = await import('@/lib/db');
         const existingUser = await db.user.findUnique({
           where: { email: email.toLowerCase().trim() },
         });
@@ -159,28 +173,32 @@ export async function POST(request: NextRequest) {
               id: authData.user.id,
               email: email.toLowerCase().trim(),
               name: email.split('@')[0],
-              emailVerified: null, // Not verified yet — will be set after OTP
+              emailVerified: null,
             },
           });
         }
       } catch (dbError) {
-        console.error('[SIGNUP] Database user creation error:', dbError);
-        // Don't fail the whole request — the Supabase auth user was created
-        // We can reconcile the DB record later
+        // Non-fatal — log but don't fail the signup
+        // The user can still verify their email and sign in via Supabase Auth
+        console.error('[SIGNUP] DB user creation failed (non-fatal):', dbError instanceof Error ? dbError.message : dbError);
       }
     }
 
     // ── Success ─────────────────────────────────────────────────────────────
+    console.log('[SIGNUP] Success for:', email.toLowerCase().trim(), '| Confirmed:', !!authData.user?.email_confirmed_at);
+
     return NextResponse.json({
       success: true,
       message: 'Account created. A verification code has been sent to your email.',
       email: email.toLowerCase().trim(),
-      // If Supabase auto-confirms (e.g., in dev mode), let the client know
       emailConfirmed: authData.user?.email_confirmed_at != null,
     });
 
   } catch (error) {
-    console.error('[SIGNUP] Unexpected error:', error);
+    // Detailed error logging for debugging (not shown to user)
+    console.error('[SIGNUP] Unexpected error:', error instanceof Error ? error.message : error);
+    console.error('[SIGNUP] Stack:', error instanceof Error ? error.stack : 'N/A');
+
     return NextResponse.json(
       { error: 'An unexpected error occurred. Please try again.' },
       { status: 500 }
