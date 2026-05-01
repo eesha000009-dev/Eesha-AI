@@ -91,8 +91,8 @@ export function FileExplorer() {
   }, [currentPath, refreshFiles]);
 
   return (
-    <div className="flex h-full flex-col border-r border-white/5 dark:border-white/5 bg-white/50 dark:bg-black/40 backdrop-blur-sm">
-      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+    <div className="flex h-full flex-col bg-white/30 dark:bg-black/30 backdrop-blur-sm">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border-subtle)]">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Explorer</span>
         <div className="flex items-center gap-0.5">
           <Button variant="ghost" size="icon" className="size-6 text-muted-foreground hover:text-foreground" onClick={handleNewFile} title="New file">
@@ -108,7 +108,7 @@ export function FileExplorer() {
       </div>
 
       {/* Breadcrumb */}
-      <div className="flex items-center gap-1 border-b border-border px-3 py-1.5">
+      <div className="flex items-center gap-1 px-3 py-1.5 border-b border-[var(--border-subtle)]">
         <button onClick={() => setCurrentPath('')} className="text-[11px] text-primary hover:text-primary/80">workspace</button>
         {currentPath.split('/').filter(Boolean).map((segment, i, arr) => (
           <span key={i} className="flex items-center gap-1">
@@ -140,7 +140,7 @@ export function FileExplorer() {
           {files.length === 0 && (
             <div className="relative flex flex-col items-center justify-center py-10 text-[11px] text-muted-foreground">
               <img
-                src="/transparent-logo.png"
+                src="/splash-screen.png"
                 alt=""
                 className="size-16 object-contain opacity-20 mb-3 animate-breathe-slow"
                 style={{ filter: 'brightness(1.8) saturate(1.4) drop-shadow(0 0 30px rgba(139, 92, 246, 0.15))' }}

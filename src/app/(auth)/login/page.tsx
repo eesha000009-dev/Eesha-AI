@@ -92,7 +92,7 @@ export default function LoginPage() {
       <SmokyBackground />
 
       {/* ── Left Panel: Branding (hidden on mobile) ──────────────────────── */}
-      <div className="hidden lg:flex relative z-10 w-1/2 flex-col justify-between p-12 border-r border-border">
+      <div className="hidden lg:flex relative z-10 w-1/2 flex-col justify-between p-12 border-r border-[var(--border-subtle)]">
         {/* Back link */}
         <button
           onClick={() => window.location.href = '/'}
@@ -107,7 +107,7 @@ export default function LoginPage() {
           <div className="space-y-3">
             <h1 className="text-3xl font-bold text-foreground">
               Welcome back to<br />
-              <span className="bg-gradient-to-r from-violet-500 to-cyan-500 dark:from-violet-400 dark:to-cyan-400 bg-clip-text text-transparent">Eesha AI</span>.
+              <span className="bg-gradient-to-r from-violet-500 to-emerald-500 dark:from-violet-400 dark:to-emerald-400 bg-clip-text text-transparent">Eesha AI</span>.
             </h1>
             <p className="text-base text-muted-foreground max-w-md leading-relaxed">
               Your AI coding partner with multi-agent intelligence. Sign in to continue where you left off.
@@ -156,7 +156,7 @@ export default function LoginPage() {
           {/* Mobile logo */}
           <div className="lg:hidden mb-8 flex items-center gap-3">
             <img src="/splash-screen.png" alt="Eesha AI" className="h-10 w-auto object-contain" />
-            <span className="text-lg font-bold bg-gradient-to-r from-violet-500 to-cyan-500 dark:from-violet-400 dark:to-cyan-400 bg-clip-text text-transparent">Eesha AI</span>
+            <span className="text-lg font-bold bg-gradient-to-r from-violet-500 to-emerald-500 dark:from-violet-400 dark:to-emerald-400 bg-clip-text text-transparent">Eesha AI</span>
           </div>
 
           {/* Header */}
@@ -241,7 +241,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading || !email.trim() || !password}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? <RefreshCw className="size-4 animate-spin" /> : (
                 <>
