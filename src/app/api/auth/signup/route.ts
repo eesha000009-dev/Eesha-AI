@@ -29,17 +29,19 @@ function checkSignupRateLimit(ip: string): { allowed: boolean; retryAfter?: numb
 //   1. Validate input (email, password, policy agreement)
 //   2. Rate limit by IP
 //   3. Check if user already exists (admin API)
-//   4. Create user via admin.createUser() with email_confirm: false
-//      (service role — does NOT send any email, does NOT auto-confirm)
-//   5. Send 6-digit OTP code via signInWithOtp() (anon key — ALWAYS sends OTP code)
-//   6. Create a corresponding user record in our Prisma database (best-effort)
-//   7. Return success — client will show OTP input
+//      - If confirmed → tell them to log in
+//      - If unconfirmed → resend OTP via signInWithOtp()
+//   4. Create user via signUp() (anon key) — this creates the user AND
+//      automatically sends the OTP verification email in ONE step
+//   5. Create a corresponding user record in our Prisma database (best-effort)
+//   6. Return success — client will show OTP input
 //
-// Why this approach is secure:
-//   - admin.createUser() with email_confirm:false → user is created but NOT verified
-//   - signInWithOtp() → ALWAYS sends a 6-digit OTP code (never a link)
-//   - User MUST enter the OTP code in our UI to verify their email
-//   - No magic links that could redirect to wrong URLs
+// Why signUp() instead of admin.createUser() + signInWithOtp():
+//   - admin.createUser() creates the user but does NOT send any email
+//   - signInWithOtp() with shouldCreateUser: false often fails for
+//     admin-created unconfirmed users (Supabase returns an error)
+//   - signUp() from the anon key client naturally creates the user AND
+//     triggers the OTP email in a single atomic operation
 //   - OTP codes expire after a configurable time (Supabase default: 24h)
 
 export async function POST(request: NextRequest) {
@@ -150,7 +152,7 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // User exists but email is NOT confirmed — send new OTP code
+        // User exists but email is NOT confirmed — resend OTP code
         console.log('[SIGNUP] User exists but unconfirmed, resending OTP for:', normalizedEmail);
 
         const signupClient = createSignupClient();
@@ -167,10 +169,54 @@ export async function POST(request: NextRequest) {
 
         if (otpError) {
           console.error('[SIGNUP] Resend OTP error:', otpError.message);
-          return NextResponse.json(
-            { error: 'Could not resend verification code. Please try again.' },
-            { status: 500 }
-          );
+          // If resend fails, try updating the user's password via admin API
+          // and then try signUp again which will resend the OTP
+          console.log('[SIGNUP] Trying admin password update + signUp fallback...');
+          try {
+            await adminClient.auth.admin.updateUserById(existingUser.id, {
+              password,
+            });
+            const { error: signUpError } = await signupClient.auth.signUp({
+              email: normalizedEmail,
+              password,
+              options: {
+                data: {
+                  agreed_to_policy: true,
+                  agreed_at: new Date().toISOString(),
+                },
+              },
+            });
+            if (signUpError) {
+              console.error('[SIGNUP] Fallback signUp error:', signUpError.message);
+              return NextResponse.json(
+                { error: 'Could not resend verification code. Please try again or contact support.' },
+                { status: 500 }
+              );
+            }
+          } catch (fallbackError) {
+            console.error('[SIGNUP] Fallback error:', fallbackError);
+            return NextResponse.json(
+              { error: 'Could not resend verification code. Please try again.' },
+              { status: 500 }
+            );
+          }
+        }
+
+        // Best-effort DB update
+        try {
+          const { db } = await import('@/lib/db');
+          await db.user.upsert({
+            where: { email: normalizedEmail },
+            create: {
+              id: existingUser.id,
+              email: normalizedEmail,
+              name: normalizedEmail.split('@')[0],
+              emailVerified: null,
+            },
+            update: {},
+          });
+        } catch (dbError) {
+          console.error('[SIGNUP] DB user upsert failed (non-fatal):', dbError instanceof Error ? dbError.message : dbError);
         }
 
         return NextResponse.json({
@@ -183,25 +229,42 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── Step 2: Create user via admin API (NO email sent, NO auto-confirm) ──
-    // This creates the user record in Supabase Auth without triggering any
-    // email or auto-confirming. We control the verification flow ourselves.
-    const { data: newUserData, error: createError } = await adminClient.auth.admin.createUser({
+    // ── Step 2: Create user AND send OTP via signUp() ──────────────────────
+    // signUp() with the anon key client does TWO things atomically:
+    //   1. Creates the user in Supabase Auth (unconfirmed)
+    //   2. Sends the OTP verification email
+    //
+    // This is more reliable than admin.createUser() + signInWithOtp() because
+    // signInWithOtp({ shouldCreateUser: false }) often fails for admin-created
+    // unconfirmed users.
+    let signupClient;
+    try {
+      signupClient = createSignupClient();
+    } catch (envError) {
+      console.error('[SIGNUP] Missing Supabase anon env vars:', envError);
+      return NextResponse.json(
+        { error: 'Server configuration error. Please contact support.' },
+        { status: 500 }
+      );
+    }
+
+    const { data: signUpData, error: signUpError } = await signupClient.auth.signUp({
       email: normalizedEmail,
       password,
-      email_confirm: false, // CRITICAL: Do NOT auto-confirm
-      user_metadata: {
-        agreed_to_policy: true,
-        agreed_at: new Date().toISOString(),
+      options: {
+        data: {
+          agreed_to_policy: true,
+          agreed_at: new Date().toISOString(),
+        },
       },
     });
 
-    if (createError) {
-      console.error('[SIGNUP] Admin create user error:', createError.message);
+    if (signUpError) {
+      console.error('[SIGNUP] signUp error:', signUpError.message);
 
-      if (createError.message.includes('already registered') ||
-          createError.message.includes('already been registered') ||
-          createError.message.includes('User already registered')) {
+      if (signUpError.message.includes('already registered') ||
+          signUpError.message.includes('already been registered') ||
+          signUpError.message.includes('User already registered')) {
         return NextResponse.json(
           { error: 'An account with this email already exists. Please log in instead.' },
           { status: 409 }
@@ -214,47 +277,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!newUserData?.user) {
-      console.error('[SIGNUP] No user returned from admin.createUser');
+    if (!signUpData?.user) {
+      console.error('[SIGNUP] No user returned from signUp');
       return NextResponse.json(
         { error: 'Unable to create account. Please try again.' },
         { status: 500 }
       );
     }
 
-    // ── Step 3: Send 6-digit OTP code via signInWithOtp() ───────────────────
-    // signInWithOtp() ALWAYS sends a 6-digit OTP code (never a magic link).
-    // Since we already created the user, we set shouldCreateUser: false.
-    // The OTP is verified against the existing user in Supabase Auth.
-    let signupClient;
-    try {
-      signupClient = createSignupClient();
-    } catch (envError) {
-      console.error('[SIGNUP] Missing Supabase anon env vars:', envError);
-      return NextResponse.json(
-        { error: 'Server configuration error. Please contact support.' },
-        { status: 500 }
-      );
-    }
+    // Check if email was auto-confirmed (shouldn't happen with "Confirm email" enabled)
+    if (signUpData.user.email_confirmed_at) {
+      console.log('[SIGNUP] User auto-confirmed (unexpected):', normalizedEmail);
 
-    const { error: otpError } = await signupClient.auth.signInWithOtp({
-      email: normalizedEmail,
-      options: {
-        shouldCreateUser: false, // User already created via admin API
-        data: {
-          agreed_to_policy: true,
-          agreed_at: new Date().toISOString(),
-        },
-      },
-    });
+      // Best-effort DB creation
+      try {
+        const { db } = await import('@/lib/db');
+        const existingDbUser = await db.user.findUnique({
+          where: { email: normalizedEmail },
+        });
+        if (!existingDbUser) {
+          await db.user.create({
+            data: {
+              id: signUpData.user.id,
+              email: normalizedEmail,
+              name: normalizedEmail.split('@')[0],
+              emailVerified: new Date(),
+            },
+          });
+        }
+      } catch (dbError) {
+        console.error('[SIGNUP] DB user creation failed (non-fatal):', dbError instanceof Error ? dbError.message : dbError);
+      }
 
-    if (otpError) {
-      console.error('[SIGNUP] Send OTP error:', otpError.message);
-      // User was created but OTP failed — they can request a resend
-      return NextResponse.json(
-        { error: 'Account created but we could not send the verification code. Please try resending.' },
-        { status: 500 }
-      );
+      return NextResponse.json({
+        success: true,
+        message: 'Account created and email confirmed.',
+        email: normalizedEmail,
+        emailConfirmed: true,
+      });
     }
 
     // ── Best-effort: Create Prisma user record ──────────────────────────────
@@ -267,7 +327,7 @@ export async function POST(request: NextRequest) {
       if (!existingDbUser) {
         await db.user.create({
           data: {
-            id: newUserData.user.id,
+            id: signUpData.user.id,
             email: normalizedEmail,
             name: normalizedEmail.split('@')[0],
             emailVerified: null,
@@ -279,7 +339,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Success ─────────────────────────────────────────────────────────────
-    console.log('[SIGNUP] Success for:', normalizedEmail, '| OTP sent');
+    console.log('[SIGNUP] Success for:', normalizedEmail, '| OTP sent via signUp');
 
     return NextResponse.json({
       success: true,
