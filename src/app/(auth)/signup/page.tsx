@@ -344,7 +344,7 @@ export default function SignupPage() {
       <SmokyBackground />
 
       {/* ── Left Panel: Branding (hidden on mobile) ──────────────────────── */}
-      <div className="hidden lg:flex relative z-10 w-1/2 flex-col justify-between p-12 border-r border-border">
+      <div className="hidden lg:flex relative z-10 w-1/2 flex-col justify-between p-12 border-r border-[var(--border-subtle)]">
         {/* Back link */}
         <button
           onClick={() => window.location.href = '/'}
@@ -358,7 +358,7 @@ export default function SignupPage() {
           <img src="/splash-screen.png" alt="Eesha AI" className="h-20 w-auto object-contain" />
           <div className="space-y-3">
             <h1 className="text-3xl font-bold text-foreground">
-              The AI that codes<br />with a <span className="bg-gradient-to-r from-violet-500 to-cyan-500 dark:from-violet-400 dark:to-cyan-400 bg-clip-text text-transparent">committee mind</span>.
+              The AI that codes<br />with a <span className="bg-gradient-to-r from-violet-500 to-emerald-500 dark:from-violet-400 dark:to-emerald-400 bg-clip-text text-transparent">committee mind</span>.
             </h1>
             <p className="text-base text-muted-foreground max-w-md leading-relaxed">
               Three specialized AI agents — a Drafter, a Critic, and a Consensus Builder — collaborate to deliver superior code quality on every request.
@@ -407,7 +407,7 @@ export default function SignupPage() {
           {/* Mobile logo */}
           <div className="lg:hidden mb-8 flex items-center gap-3">
             <img src="/splash-screen.png" alt="Eesha AI" className="h-10 w-auto object-contain" />
-            <span className="text-lg font-bold bg-gradient-to-r from-violet-500 to-cyan-500 dark:from-violet-400 dark:to-cyan-400 bg-clip-text text-transparent">Eesha AI</span>
+            <span className="text-lg font-bold bg-gradient-to-r from-violet-500 to-emerald-500 dark:from-violet-400 dark:to-emerald-400 bg-clip-text text-transparent">Eesha AI</span>
           </div>
 
           {/* Step indicator */}
@@ -491,7 +491,7 @@ export default function SignupPage() {
                 <button
                   onClick={handleEmailNext}
                   disabled={!email.trim()}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                   <ArrowRight className="size-4" />
@@ -549,7 +549,7 @@ export default function SignupPage() {
                   <button
                     onClick={handleUsernameNext}
                     disabled={username.trim().length < 3}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Continue
                     <ArrowRight className="size-4" />
@@ -628,7 +628,7 @@ export default function SignupPage() {
                   <button
                     onClick={handlePasswordNext}
                     disabled={password.length < 8}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Continue
                     <ArrowRight className="size-4" />
@@ -703,7 +703,7 @@ export default function SignupPage() {
                   <button
                     onClick={handlePolicySubmit}
                     disabled={isLoading || !agreedToPolicy}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoading ? (
                       <RefreshCw className="size-4 animate-spin" />
@@ -745,7 +745,7 @@ export default function SignupPage() {
                 <button
                   onClick={handleVerifyOtp}
                   disabled={isLoading || otp.length !== 8}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <RefreshCw className="size-4 animate-spin" />
@@ -801,7 +801,7 @@ export default function SignupPage() {
                 </p>
                 <button
                   onClick={() => window.location.href = '/login'}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-cyan-500"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-emerald-500"
                 >
                   Sign In Now
                   <ArrowRight className="size-4" />

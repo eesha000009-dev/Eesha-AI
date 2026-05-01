@@ -68,7 +68,7 @@ function ThemeToggle() {
           title={label}
         >
           <Icon className="size-3" />
-          <span className="hidden sm:inline">{label}</span>
+          <span className="hidden md:inline">{label}</span>
         </button>
       ))}
     </div>
@@ -125,17 +125,34 @@ export function Sidebar() {
 
   return (
     <>
+      {/* Mobile dark backdrop overlay */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar panel */}
       <motion.aside
         initial={false}
         animate={{ width: sidebarOpen ? 280 : 0, opacity: sidebarOpen ? 1 : 0 }}
         transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-        className="relative flex-shrink-0 overflow-hidden border-r border-border bg-background/80 backdrop-blur-2xl"
+        className={`relative flex-shrink-0 overflow-hidden bg-background/70 backdrop-blur-2xl z-50 ${
+          sidebarOpen ? 'md:relative fixed inset-y-0 left-0 md:border-r border-[var(--border-subtle)]' : ''
+        }`}
         style={{ maxWidth: sidebarOpen ? 280 : 0 }}
       >
         <div className="flex h-full w-[280px] flex-col">
           {/* Header with branding */}
-          <div className="flex items-center justify-between px-4 py-4">
-            <img src="/splash-screen.png" alt="Eesha AI" className="h-10 w-auto object-contain" />
+          <div className="flex items-center justify-between px-4 py-3">
+            <img src="/splash-screen.png" alt="Eesha AI" className="h-9 w-auto object-contain" />
             <Button
               variant="ghost"
               size="icon"
@@ -146,11 +163,11 @@ export function Sidebar() {
             </Button>
           </div>
 
-          {/* New Chat button */}
+          {/* New Chat button — Mint Glass accent */}
           <div className="px-3 pb-3">
             <Button
               onClick={handleNewChat}
-              className="group w-full justify-start gap-2.5 rounded-xl border border-border bg-gradient-to-r from-violet-600/10 to-cyan-600/10 py-2.5 text-sm text-foreground transition-all duration-200 hover:from-violet-600/20 hover:to-cyan-600/20 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5"
+              className="group w-full justify-start gap-2.5 rounded-xl border border-[var(--border-subtle)] bg-gradient-to-r from-violet-600/10 to-emerald-600/10 py-2.5 text-sm text-foreground transition-all duration-200 hover:from-violet-600/20 hover:to-emerald-600/20 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5"
               variant="ghost"
             >
               <Plus className="size-4 transition-transform group-hover:rotate-90 duration-200" />
@@ -167,7 +184,7 @@ export function Sidebar() {
                 placeholder="Search conversations..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-border bg-[var(--surface-secondary)] py-2 pl-8 pr-8 text-xs text-foreground placeholder-[var(--text-tertiary)] outline-none transition-all focus:border-primary/30 focus:bg-[var(--surface-tertiary)] focus:shadow-sm focus:shadow-primary/5"
+                className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-secondary)] py-2 pl-8 pr-8 text-xs text-foreground placeholder-[var(--text-tertiary)] outline-none transition-all focus:border-primary/30 focus:bg-[var(--surface-tertiary)] focus:shadow-sm focus:shadow-primary/5"
               />
               {searchQuery && (
                 <button
@@ -231,7 +248,7 @@ export function Sidebar() {
           </ScrollArea>
 
           {/* Footer with user info and controls */}
-          <div className="border-t border-border px-3 py-3">
+          <div className="border-t border-[var(--border-subtle)] px-3 py-3">
             <div className="mb-3">
               <ThemeToggle />
             </div>
@@ -239,7 +256,7 @@ export function Sidebar() {
             {session?.user ? (
               /* ── Authenticated: Username + sign out ── */
               <div className="flex items-center gap-2.5 rounded-lg bg-white/5 dark:bg-white/5 px-2.5 py-2.5">
-                <div className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-cyan-600 text-sm font-bold text-white">
+                <div className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-emerald-600 text-sm font-bold text-white">
                   {session.user.name?.[0]?.toUpperCase() || <User className="size-4" />}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -259,7 +276,7 @@ export function Sidebar() {
               <div className="space-y-2">
                 <Button
                   onClick={() => window.location.href = '/signup'}
-                  className="w-full justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 py-2.5 text-sm font-semibold text-white border-0 hover:from-violet-500 hover:to-cyan-500"
+                  className="w-full justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-emerald-600 py-2.5 text-sm font-semibold text-white border-0 hover:from-violet-500 hover:to-emerald-500"
                 >
                   <Sparkles className="size-4" />
                   Sign up
@@ -283,7 +300,7 @@ export function Sidebar() {
             </div>
             <div className="mt-2 flex items-center gap-2 px-2.5">
               <span className="relative flex size-2">
-                <span className="animate-status-pulse absolute inline-flex size-full rounded-full bg-emerald-500 opacity-75" />
+                <span className="animate-breathe absolute inline-flex size-full rounded-full bg-emerald-500 opacity-75" />
                 <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
               </span>
               <span className="text-[11px] text-[var(--text-tertiary)]">Eesha AI via NVIDIA API</span>
