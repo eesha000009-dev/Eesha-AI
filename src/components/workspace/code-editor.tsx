@@ -67,8 +67,8 @@ export function CodeEditor() {
             style={{
               maxWidth: '60%',
               maxHeight: '60%',
-              opacity: 0.07,
-              filter: 'brightness(1.4) saturate(1.3)',
+              opacity: 0.14,
+              filter: 'brightness(1.8) saturate(1.4) drop-shadow(0 0 40px rgba(139, 92, 246, 0.15))',
             }}
           />
         </div>
@@ -148,8 +148,8 @@ export function CodeEditor() {
               style={{
                 maxWidth: '60%',
                 maxHeight: '60%',
-                opacity: 0.07,
-                filter: 'brightness(1.4) saturate(1.3)',
+                opacity: 0.14,
+                filter: 'brightness(1.8) saturate(1.4) drop-shadow(0 0 40px rgba(139, 92, 246, 0.15))',
               }}
             />
           </div>

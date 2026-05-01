@@ -99,11 +99,11 @@ export function SmokyBackground() {
         const logoY = (h - logoSize) * 0.35;
 
         ctx.save();
-        // Increased opacity: dark 0.40, light 0.18
-        const baseAlpha = isDark ? 0.40 : 0.18;
-        const breatheAmount = isDark ? 0.04 : 0.02;
+        // Stage light effect: brighter, more vivid
+        const baseAlpha = isDark ? 0.50 : 0.25;
+        const breatheAmount = isDark ? 0.06 : 0.03;
         ctx.globalAlpha = baseAlpha + Math.sin(time * 0.4) * breatheAmount;
-        ctx.filter = 'brightness(1.5) saturate(1.4)';
+        ctx.filter = 'brightness(2.0) saturate(1.5) drop-shadow(0 0 60px rgba(139, 92, 246, 0.2))';
         ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
         ctx.restore();
       }

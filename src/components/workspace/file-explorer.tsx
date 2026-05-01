@@ -142,8 +142,8 @@ export function FileExplorer() {
               <img
                 src="/logo-transparent.png"
                 alt=""
-                className="size-16 object-contain opacity-10 mb-3 animate-breathe-slow"
-                style={{ filter: 'brightness(1.3) saturate(1.2)' }}
+                className="size-16 object-contain opacity-20 mb-3 animate-breathe-slow"
+                style={{ filter: 'brightness(1.8) saturate(1.4) drop-shadow(0 0 30px rgba(139, 92, 246, 0.15))' }}
               />
               Empty directory
             </div>
