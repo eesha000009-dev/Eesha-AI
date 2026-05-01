@@ -22,14 +22,32 @@ export interface Conversation {
   updatedAt: string;
 }
 
+// ─── Cookie helpers (replacing localStorage for production) ─────────────────
+// Cookies are more secure, don't persist across sessions unnecessarily,
+// and work in all environments including SSR-compatible contexts.
+function setCookie(name: string, value: string, days: number = 365) {
+  try {
+    const expires = new Date(Date.now() + days * 864e5).toUTCString();
+    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
+  } catch {}
+}
+
+function getCookie(name: string): string | null {
+  try {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? decodeURIComponent(match[2]) : null;
+  } catch {}
+  return null;
+}
+
 interface ChatState {
   conversations: Conversation[];
   activeConversationId: string | null;
   isStreaming: boolean;
   sidebarOpen: boolean;
   themeMode: ThemeMode;
-  freeCreditsUsed: number; // Track anonymous free messages
-  showLoginPrompt: boolean; // Show login prompt modal
+  freeCreditsUsed: number;
+  showLoginPrompt: boolean;
 
   setConversations: (conversations: Conversation[]) => void;
   setActiveConversation: (id: string | null) => void;
@@ -60,7 +78,7 @@ interface ChatState {
 function getInitialTheme(): ThemeMode {
   if (typeof window === 'undefined') return 'system';
   try {
-    const saved = localStorage.getItem('eesha-theme');
+    const saved = getCookie('eesha-theme');
     if (saved) {
       const parsed = JSON.parse(saved);
       return parsed.mode || 'system';
@@ -78,8 +96,9 @@ function applyTheme(mode: ThemeMode) {
   } else {
     document.documentElement.classList.remove('dark');
   }
+  // Save to cookie instead of localStorage
   try {
-    localStorage.setItem('eesha-theme', JSON.stringify({ mode }));
+    setCookie('eesha-theme', JSON.stringify({ mode }));
   } catch {}
 }
 
@@ -91,9 +110,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   themeMode: getInitialTheme(),
   freeCreditsUsed: typeof window !== 'undefined' ? (() => {
     try {
-      const match = document.cookie.match(/eesha-free-credits=([^;]+)/);
-      if (match) {
-        const parsed = JSON.parse(decodeURIComponent(match[1]));
+      const saved = getCookie('eesha-free-credits');
+      if (saved) {
+        const parsed = JSON.parse(saved);
         return parsed.used || 0;
       }
     } catch {}
@@ -111,8 +130,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ themeMode: mode });
   },
 
-  setFreeCreditsUsed: (used) => set({ freeCreditsUsed: used }),
-  incrementFreeCredits: () => set((state) => ({ freeCreditsUsed: state.freeCreditsUsed + 1 })),
+  setFreeCreditsUsed: (used) => {
+    set({ freeCreditsUsed: used });
+    // Save to cookie
+    try {
+      setCookie('eesha-free-credits', JSON.stringify({ used }));
+    } catch {}
+  },
+  incrementFreeCredits: () => set((state) => {
+    const newUsed = state.freeCreditsUsed + 1;
+    try {
+      setCookie('eesha-free-credits', JSON.stringify({ used: newUsed }));
+    } catch {}
+    return { freeCreditsUsed: newUsed };
+  }),
   setShowLoginPrompt: (show) => set({ showLoginPrompt: show }),
 
   addConversation: (conversation) =>
