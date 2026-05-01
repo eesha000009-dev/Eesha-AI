@@ -4,12 +4,14 @@ import { useChatStore } from '@/stores/chat-store';
 import { PanelLeft, LogIn, User, Sparkles, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 const FREE_TIER_MAX = 5;
 
 export function Header() {
-  const { sidebarOpen, setSidebarOpen, activeConversationId, conversations, freeCreditsUsed, setShowLoginPrompt } = useChatStore();
+  const { sidebarOpen, setSidebarOpen, activeConversationId, conversations, freeCreditsUsed } = useChatStore();
   const { data: session } = useSession();
+  const router = useRouter();
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
   const showTitle = activeConversation && activeConversationId;
@@ -67,9 +69,7 @@ export function Header() {
               variant="ghost"
               size="sm"
               className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                useChatStore.getState().setShowLoginPrompt(true);
-              }}
+              onClick={() => router.push('/login')}
             >
               <LogIn className="size-3" />
               Log in
@@ -77,9 +77,7 @@ export function Header() {
             <Button
               size="sm"
               className="h-7 gap-1.5 text-xs bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white border-0"
-              onClick={() => {
-                useChatStore.getState().setShowLoginPrompt(true);
-              }}
+              onClick={() => router.push('/signup')}
             >
               <Sparkles className="size-3" />
               Sign up

@@ -14,7 +14,6 @@ import { TerminalPanel } from '@/components/workspace/terminal';
 import { Button } from '@/components/ui/button';
 import { Code2, Terminal, MessageSquare } from 'lucide-react';
 import { SmokyBackground } from '@/components/chat/smoky-background';
-import { AuthModal } from '@/components/auth/auth-modal';
 
 type ActivePanel = 'chat' | 'workspace' | 'terminal';
 
@@ -81,9 +80,6 @@ export default function Home() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Auth Modal — appears when free credits run out or user clicks Login/Signup */}
-      <AuthModal />
-
       {/* Canvas background — draws ALL visual effects */}
       <SmokyBackground />
 

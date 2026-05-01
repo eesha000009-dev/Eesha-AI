@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useChatStore } from '@/stores/chat-store';
 import { useWorkspaceStore } from '@/stores/workspace-store';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 export function useChat() {
   const {
@@ -20,6 +21,7 @@ export function useChat() {
 
   const refreshFiles = useWorkspaceStore((s) => s.refreshFiles);
   const { data: session } = useSession();
+  const router = useRouter();
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +88,7 @@ export function useChat() {
         if (!session?.user) {
           const currentCredits = useChatStore.getState().freeCreditsUsed;
           if (currentCredits >= FREE_TIER_MAX) {
-            useChatStore.getState().setShowLoginPrompt(true);
+            router.push('/signup');
             setIsStreaming(false);
             setError('FREE_LIMIT_REACHED');
             return;
@@ -114,8 +116,8 @@ export function useChat() {
             setIsStreaming(false);
             resetAgentStatuses(conversationId);
             setError('FREE_LIMIT_REACHED');
-            // Show the AuthModal immediately
-            useChatStore.getState().setShowLoginPrompt(true);
+            // Redirect to signup page
+            router.push('/signup');
             return;
           }
 
@@ -251,7 +253,7 @@ export function useChat() {
         abortControllerRef.current = null;
       }
     },
-    [activeConversationId, addConversation, addMessage, updateLastAssistantMessage, setIsStreaming, updateConversationTitle, refreshFiles, setDeliberating, setAgentStatus, resetAgentStatuses]
+    [activeConversationId, addConversation, addMessage, updateLastAssistantMessage, setIsStreaming, updateConversationTitle, refreshFiles, setDeliberating, setAgentStatus, resetAgentStatuses, router]
   );
 
   const stopStreaming = useCallback(() => {

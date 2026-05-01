@@ -6,6 +6,7 @@ import { Send, Square, Code2, Sparkles, Globe, Paperclip, Shield } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/stores/chat-store';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 interface InputAreaProps {
   onSend: (content: string) => void;
@@ -17,8 +18,9 @@ export function InputArea({ onSend, onStop, isStreaming }: InputAreaProps) {
   const [input, setInput] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { freeCreditsUsed, setShowLoginPrompt } = useChatStore();
+  const { freeCreditsUsed } = useChatStore();
   const { data: session } = useSession();
+  const router = useRouter();
   const FREE_TIER_MAX = 5;
   const isAuthenticated = !!session?.user;
   const creditsRemaining = Math.max(0, FREE_TIER_MAX - freeCreditsUsed);
@@ -154,7 +156,7 @@ export function InputArea({ onSend, onStop, isStreaming }: InputAreaProps) {
           <div className="flex items-center gap-3">
             {!isAuthenticated && creditsRemaining <= 2 && creditsRemaining > 0 && (
               <button
-                onClick={() => setShowLoginPrompt(true)}
+                onClick={() => router.push('/signup')}
                 className="flex items-center gap-1 text-[11px] text-amber-400/70 hover:text-amber-400 transition-colors"
               >
                 <Sparkles className="size-3" />
@@ -163,7 +165,7 @@ export function InputArea({ onSend, onStop, isStreaming }: InputAreaProps) {
             )}
             {!isAuthenticated && creditsRemaining === 0 && (
               <button
-                onClick={() => setShowLoginPrompt(true)}
+                onClick={() => router.push('/signup')}
                 className="flex items-center gap-1 text-[11px] text-violet-400/80 hover:text-violet-400 transition-colors"
               >
                 <Sparkles className="size-3" />
