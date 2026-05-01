@@ -58,7 +58,6 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        // Login failed — check the account status to give a specific error message
         try {
           const statusRes = await fetch('/api/auth/check-status', {
             method: 'POST',
@@ -75,7 +74,6 @@ export default function LoginPage() {
             setError('Invalid email or password. Please try again.');
           }
         } catch {
-          // If the status check also fails, show generic error
           setError('Invalid email or password. Please try again.');
         }
       } else if (result?.ok) {
@@ -94,24 +92,24 @@ export default function LoginPage() {
       <SmokyBackground />
 
       {/* ── Left Panel: Branding (hidden on mobile) ──────────────────────── */}
-      <div className="hidden lg:flex relative z-10 w-1/2 flex-col justify-between p-12 border-r border-white/5">
+      <div className="hidden lg:flex relative z-10 w-1/2 flex-col justify-between p-12 border-r border-border">
         {/* Back link */}
         <button
           onClick={() => window.location.href = '/'}
-          className="flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-zinc-300 self-start"
+          className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground self-start"
         >
           ← Back to chat
         </button>
 
         {/* Center branding */}
         <div className="flex flex-col items-start gap-6">
-          <img src="/logo-transparent.png" alt="Eesha AI" className="h-20 w-auto object-contain" />
+          <img src="/splash-screen.png" alt="Eesha AI" className="h-20 w-auto object-contain" />
           <div className="space-y-3">
-            <h1 className="text-3xl font-bold text-white">
+            <h1 className="text-3xl font-bold text-foreground">
               Welcome back to<br />
-              <span className="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">Eesha AI</span>.
+              <span className="bg-gradient-to-r from-violet-500 to-cyan-500 dark:from-violet-400 dark:to-cyan-400 bg-clip-text text-transparent">Eesha AI</span>.
             </h1>
-            <p className="text-base text-zinc-400 max-w-md leading-relaxed">
+            <p className="text-base text-muted-foreground max-w-md leading-relaxed">
               Your AI coding partner with multi-agent intelligence. Sign in to continue where you left off.
             </p>
           </div>
@@ -126,11 +124,11 @@ export default function LoginPage() {
             ].map(({ icon: Icon, title, desc }) => (
               <div key={title} className="flex items-start gap-3">
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-600/10 border border-violet-500/20">
-                  <Icon className="size-4 text-violet-400" />
+                  <Icon className="size-4 text-violet-500 dark:text-violet-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-zinc-200">{title}</p>
-                  <p className="text-xs text-zinc-500">{desc}</p>
+                  <p className="text-sm font-medium text-foreground">{title}</p>
+                  <p className="text-xs text-muted-foreground">{desc}</p>
                 </div>
               </div>
             ))}
@@ -139,8 +137,8 @@ export default function LoginPage() {
 
         {/* Bottom security notice */}
         <div className="flex items-center gap-2">
-          <Shield className="size-3.5 text-zinc-600" />
-          <span className="text-xs text-zinc-600">Protected by Supabase RLS & end-to-end encryption</span>
+          <Shield className="size-3.5 text-muted-foreground/60" />
+          <span className="text-xs text-muted-foreground/60">Protected by Supabase RLS & end-to-end encryption</span>
         </div>
       </div>
 
@@ -150,21 +148,21 @@ export default function LoginPage() {
           {/* Mobile back link */}
           <button
             onClick={() => window.location.href = '/'}
-            className="lg:hidden flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-zinc-300 mb-6"
+            className="lg:hidden flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground mb-6"
           >
             ← Back to chat
           </button>
 
           {/* Mobile logo */}
           <div className="lg:hidden mb-8 flex items-center gap-3">
-            <img src="/logo-transparent.png" alt="Eesha AI" className="h-10 w-auto object-contain" />
-            <span className="text-lg font-bold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">Eesha AI</span>
+            <img src="/splash-screen.png" alt="Eesha AI" className="h-10 w-auto object-contain" />
+            <span className="text-lg font-bold bg-gradient-to-r from-violet-500 to-cyan-500 dark:from-violet-400 dark:to-cyan-400 bg-clip-text text-transparent">Eesha AI</span>
           </div>
 
           {/* Header */}
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-white">Welcome back</h2>
-            <p className="mt-2 text-sm text-zinc-400">Sign in to continue where you left off.</p>
+            <h2 className="text-2xl font-bold text-foreground">Welcome back</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Sign in to continue where you left off.</p>
           </div>
 
           {/* Error display */}
@@ -174,8 +172,8 @@ export default function LoginPage() {
               animate={{ opacity: 1, y: 0 }}
               className="mb-5 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3"
             >
-              <AlertCircle className="size-4 shrink-0 text-red-400" />
-              <span className="text-sm text-red-300">{error}</span>
+              <AlertCircle className="size-4 shrink-0 text-red-500 dark:text-red-400" />
+              <span className="text-sm text-red-700 dark:text-red-300">{error}</span>
             </motion.div>
           )}
 
@@ -184,7 +182,7 @@ export default function LoginPage() {
             <button
               onClick={handleGithubSignIn}
               disabled={isLoading}
-              className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm font-medium text-white transition-all hover:bg-white/10 hover:border-white/20 disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-sm font-medium text-foreground transition-all hover:bg-accent hover:border-primary/20 disabled:opacity-50"
             >
               <Github className="size-5" />
               Sign in with GitHub
@@ -194,10 +192,10 @@ export default function LoginPage() {
           {hasGithub && (
             <div className="relative my-5">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/10" />
+                <div className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-[#09090f] px-3 text-zinc-500">or sign in with email</span>
+                <span className="bg-background px-3 text-muted-foreground">or sign in with email</span>
               </div>
             </div>
           )}
@@ -205,35 +203,35 @@ export default function LoginPage() {
           {/* Email + Password form */}
           <form onSubmit={handleEmailLogin} className="space-y-4">
             <div>
-              <label className="mb-2 block text-xs font-medium text-zinc-400">Email address</label>
+              <label className="mb-2 block text-xs font-medium text-muted-foreground">Email address</label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                <Mail className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setError(''); }}
                   placeholder="you@example.com"
                   autoFocus
-                  className="w-full rounded-xl border border-white/10 bg-white/5 py-3.5 pl-11 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition-all focus:border-violet-500/50 focus:bg-white/10 focus:ring-2 focus:ring-violet-500/30"
+                  className="w-full rounded-xl border border-border bg-card py-3.5 pl-11 pr-4 text-sm text-foreground placeholder-muted-foreground outline-none transition-all focus:border-primary/50 focus:bg-accent focus:ring-2 focus:ring-primary/30"
                 />
               </div>
             </div>
 
             <div>
-              <label className="mb-2 block text-xs font-medium text-zinc-400">Password</label>
+              <label className="mb-2 block text-xs font-medium text-muted-foreground">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                <Lock className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(''); }}
                   placeholder="Enter your password"
-                  className="w-full rounded-xl border border-white/10 bg-white/5 py-3.5 pl-11 pr-11 text-sm text-white placeholder-zinc-500 outline-none transition-all focus:border-violet-500/50 focus:bg-white/10 focus:ring-2 focus:ring-violet-500/30"
+                  className="w-full rounded-xl border border-border bg-card py-3.5 pl-11 pr-11 text-sm text-foreground placeholder-muted-foreground outline-none transition-all focus:border-primary/50 focus:bg-accent focus:ring-2 focus:ring-primary/30"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
@@ -255,11 +253,11 @@ export default function LoginPage() {
           </form>
 
           {/* Toggle signup */}
-          <div className="mt-8 text-center text-sm text-zinc-400">
+          <div className="mt-8 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
             <button
               onClick={() => window.location.href = '/signup'}
-              className="text-violet-400 hover:text-violet-300 transition-colors font-medium"
+              className="text-primary hover:text-primary/80 transition-colors font-medium"
             >
               Sign up
             </button>
@@ -267,8 +265,8 @@ export default function LoginPage() {
 
           {/* Security notice */}
           <div className="mt-6 flex items-center justify-center gap-1.5">
-            <Shield className="size-3 text-zinc-600" />
-            <span className="text-[10px] text-zinc-600">
+            <Shield className="size-3 text-muted-foreground/60" />
+            <span className="text-[10px] text-muted-foreground/60">
               Protected by Supabase RLS, end-to-end encryption &amp; email verification
             </span>
           </div>

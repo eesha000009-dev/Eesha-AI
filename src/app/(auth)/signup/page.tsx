@@ -83,7 +83,7 @@ function OTPInput({ value, onChange, disabled, digits = 8 }: {
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={handlePaste}
           disabled={disabled}
-          className="size-11 rounded-lg border border-white/10 bg-white/5 text-center text-lg font-bold text-white outline-none transition-all focus:border-violet-500/50 focus:bg-white/10 focus:ring-2 focus:ring-violet-500/30 disabled:opacity-50"
+          className="size-11 rounded-lg border border-border bg-card text-center text-lg font-bold text-foreground outline-none transition-all focus:border-primary/50 focus:bg-accent focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
         />
       ))}
     </div>
@@ -317,19 +317,19 @@ export default function SignupPage() {
                 ? 'size-7 bg-emerald-500/20 border border-emerald-500/40'
                 : i === activeIndex
                 ? 'size-7 bg-violet-500/20 border border-violet-500/40'
-                : 'size-7 bg-white/5 border border-white/10'
+                : 'size-7 bg-card border border-border'
             }`}>
               {i < activeIndex ? (
-                <Check className="size-3.5 text-emerald-400" />
+                <Check className="size-3.5 text-emerald-500 dark:text-emerald-400" />
               ) : (
-                <span className={`text-[10px] font-bold ${i === activeIndex ? 'text-violet-400' : 'text-zinc-500'}`}>
+                <span className={`text-[10px] font-bold ${i === activeIndex ? 'text-primary' : 'text-muted-foreground'}`}>
                   {i + 1}
                 </span>
               )}
             </div>
             {i < visibleSteps.length - 1 && (
               <div className={`h-px w-6 transition-all duration-300 ${
-                i < activeIndex ? 'bg-emerald-500/40' : 'bg-white/10'
+                i < activeIndex ? 'bg-emerald-500/40' : 'bg-accent'
               }`} />
             )}
           </div>
@@ -344,23 +344,23 @@ export default function SignupPage() {
       <SmokyBackground />
 
       {/* ── Left Panel: Branding (hidden on mobile) ──────────────────────── */}
-      <div className="hidden lg:flex relative z-10 w-1/2 flex-col justify-between p-12 border-r border-white/5">
+      <div className="hidden lg:flex relative z-10 w-1/2 flex-col justify-between p-12 border-r border-border">
         {/* Back link */}
         <button
           onClick={() => window.location.href = '/'}
-          className="flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-zinc-300 self-start"
+          className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground self-start"
         >
           ← Back to chat
         </button>
 
         {/* Center branding */}
         <div className="flex flex-col items-start gap-6">
-          <img src="/logo-transparent.png" alt="Eesha AI" className="h-20 w-auto object-contain" />
+          <img src="/splash-screen.png" alt="Eesha AI" className="h-20 w-auto object-contain" />
           <div className="space-y-3">
-            <h1 className="text-3xl font-bold text-white">
-              The AI that codes<br />with a <span className="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">committee mind</span>.
+            <h1 className="text-3xl font-bold text-foreground">
+              The AI that codes<br />with a <span className="bg-gradient-to-r from-violet-500 to-cyan-500 dark:from-violet-400 dark:to-cyan-400 bg-clip-text text-transparent">committee mind</span>.
             </h1>
-            <p className="text-base text-zinc-400 max-w-md leading-relaxed">
+            <p className="text-base text-muted-foreground max-w-md leading-relaxed">
               Three specialized AI agents — a Drafter, a Critic, and a Consensus Builder — collaborate to deliver superior code quality on every request.
             </p>
           </div>
@@ -375,11 +375,11 @@ export default function SignupPage() {
             ].map(({ icon: Icon, title, desc }) => (
               <div key={title} className="flex items-start gap-3">
                 <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-600/10 border border-violet-500/20">
-                  <Icon className="size-4 text-violet-400" />
+                  <Icon className="size-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-zinc-200">{title}</p>
-                  <p className="text-xs text-zinc-500">{desc}</p>
+                  <p className="text-sm font-medium text-foreground">{title}</p>
+                  <p className="text-xs text-muted-foreground">{desc}</p>
                 </div>
               </div>
             ))}
@@ -388,8 +388,8 @@ export default function SignupPage() {
 
         {/* Bottom security notice */}
         <div className="flex items-center gap-2">
-          <Shield className="size-3.5 text-zinc-600" />
-          <span className="text-xs text-zinc-600">Protected by Supabase RLS & end-to-end encryption</span>
+          <Shield className="size-3.5 text-muted-foreground/60" />
+          <span className="text-xs text-muted-foreground/60">Protected by Supabase RLS & end-to-end encryption</span>
         </div>
       </div>
 
@@ -399,15 +399,15 @@ export default function SignupPage() {
           {/* Mobile back link */}
           <button
             onClick={() => window.location.href = '/'}
-            className="lg:hidden flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-zinc-300 mb-6"
+            className="lg:hidden flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground mb-6"
           >
             ← Back to chat
           </button>
 
           {/* Mobile logo */}
           <div className="lg:hidden mb-8 flex items-center gap-3">
-            <img src="/logo-transparent.png" alt="Eesha AI" className="h-10 w-auto object-contain" />
-            <span className="text-lg font-bold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">Eesha AI</span>
+            <img src="/splash-screen.png" alt="Eesha AI" className="h-10 w-auto object-contain" />
+            <span className="text-lg font-bold bg-gradient-to-r from-violet-500 to-cyan-500 dark:from-violet-400 dark:to-cyan-400 bg-clip-text text-transparent">Eesha AI</span>
           </div>
 
           {/* Step indicator */}
@@ -415,14 +415,14 @@ export default function SignupPage() {
 
           {/* Header */}
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-white">
+            <h2 className="text-2xl font-bold text-foreground">
               {step === 'success' ? 'Email Verified!' :
                step === 'verify' ? 'Verify your email' :
                'Create your account'}
             </h2>
-            <p className="mt-2 text-sm text-zinc-400">
+            <p className="mt-2 text-sm text-muted-foreground">
               {step === 'success' ? 'Your account is ready. Sign in to start using Eesha AI.' :
-               step === 'verify' ? <>Enter the 8-digit code sent to <strong className="text-white">{email}</strong></> :
+               step === 'verify' ? <>Enter the 8-digit code sent to <strong className="text-foreground">{email}</strong></> :
                'Sign up to unlock unlimited AI conversations.'}
             </p>
           </div>
@@ -434,8 +434,8 @@ export default function SignupPage() {
               animate={{ opacity: 1, y: 0 }}
               className="mb-5 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3"
             >
-              <AlertCircle className="size-4 shrink-0 text-red-400" />
-              <span className="text-sm text-red-300">{error}</span>
+              <AlertCircle className="size-4 shrink-0 text-red-500 dark:text-red-400" />
+              <span className="text-sm text-red-700 dark:text-red-300">{error}</span>
             </motion.div>
           )}
 
@@ -456,7 +456,7 @@ export default function SignupPage() {
                   <button
                     onClick={handleGithubSignIn}
                     disabled={isLoading}
-                    className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm font-medium text-white transition-all hover:bg-white/10 hover:border-white/20 disabled:opacity-50"
+                    className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-sm font-medium text-foreground transition-all hover:bg-accent hover:border-primary/20 disabled:opacity-50"
                   >
                     <Github className="size-5" />
                     Continue with GitHub
@@ -466,25 +466,25 @@ export default function SignupPage() {
                 {hasGithub && (
                   <div className="relative my-1">
                     <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-white/10" />
+                      <div className="w-full border-t border-border" />
                     </div>
                     <div className="relative flex justify-center text-xs">
-                      <span className="bg-[#09090f] px-3 text-zinc-500">or sign up with email</span>
+                      <span className="bg-background px-3 text-muted-foreground">or sign up with email</span>
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <label className="mb-2 block text-xs font-medium text-zinc-400">Email address</label>
+                  <label className="mb-2 block text-xs font-medium text-muted-foreground">Email address</label>
                   <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                    <Mail className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => { setEmail(e.target.value); setError(''); }}
                       placeholder="you@example.com"
                       autoFocus
-                      className="w-full rounded-xl border border-white/10 bg-white/5 py-3.5 pl-11 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition-all focus:border-violet-500/50 focus:bg-white/10 focus:ring-2 focus:ring-violet-500/30"
+                      className="w-full rounded-xl border border-border bg-card py-3.5 pl-11 pr-4 text-sm text-foreground placeholder-muted-foreground outline-none transition-all focus:border-primary/50 focus:bg-accent focus:ring-2 focus:ring-primary/30"
                     />
                   </div>
                 </div>
@@ -500,14 +500,14 @@ export default function SignupPage() {
                 {/* Benefits on mobile */}
                 <div className="lg:hidden grid grid-cols-2 gap-2 pt-2">
                   {[
-                    { icon: Infinity, label: 'Unlimited chats', color: 'text-violet-400' },
-                    { icon: MessageSquare, label: 'Save history', color: 'text-cyan-400' },
-                    { icon: Code2, label: 'Workspace access', color: 'text-emerald-400' },
-                    { icon: Terminal, label: 'Terminal access', color: 'text-amber-400' },
+                    { icon: Infinity, label: 'Unlimited chats', color: 'text-violet-500 dark:text-violet-400' },
+                    { icon: MessageSquare, label: 'Save history', color: 'text-cyan-500 dark:text-cyan-400' },
+                    { icon: Code2, label: 'Workspace access', color: 'text-emerald-500 dark:text-emerald-400' },
+                    { icon: Terminal, label: 'Terminal access', color: 'text-amber-500 dark:text-amber-400' },
                   ].map(({ icon: Icon, label, color }) => (
-                    <div key={label} className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
+                    <div key={label} className="flex items-center gap-2 rounded-lg bg-card px-3 py-2">
                       <Icon className={`size-4 ${color}`} />
-                      <span className="text-xs text-zinc-300">{label}</span>
+                      <span className="text-xs text-foreground">{label}</span>
                     </div>
                   ))}
                 </div>
@@ -525,24 +525,24 @@ export default function SignupPage() {
                 className="space-y-4"
               >
                 <div>
-                  <label className="mb-2 block text-xs font-medium text-zinc-400">Choose a username</label>
+                  <label className="mb-2 block text-xs font-medium text-muted-foreground">Choose a username</label>
                   <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">@</span>
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
                     <input
                       type="text"
                       value={username}
                       onChange={(e) => { setUsername(e.target.value.replace(/[^a-zA-Z0-9_-]/g, '')); setError(''); }}
                       placeholder="your_username"
                       autoFocus
-                      className="w-full rounded-xl border border-white/10 bg-white/5 py-3.5 pl-9 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition-all focus:border-violet-500/50 focus:bg-white/10 focus:ring-2 focus:ring-violet-500/30"
+                      className="w-full rounded-xl border border-border bg-card py-3.5 pl-9 pr-4 text-sm text-foreground placeholder-muted-foreground outline-none transition-all focus:border-primary/50 focus:bg-accent focus:ring-2 focus:ring-primary/30"
                     />
                   </div>
-                  <p className="mt-2 text-xs text-zinc-500">This will be your display name. 3+ characters, letters, numbers, underscores, hyphens.</p>
+                  <p className="mt-2 text-xs text-muted-foreground">This will be your display name. 3+ characters, letters, numbers, underscores, hyphens.</p>
                 </div>
                 <div className="flex gap-3">
                   <button
                     onClick={() => { setStep('email'); setError(''); }}
-                    className="rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 text-sm text-zinc-400 transition-all hover:bg-white/10"
+                    className="rounded-xl border border-border bg-card px-5 py-3.5 text-sm text-muted-foreground transition-all hover:bg-accent"
                   >
                     Back
                   </button>
@@ -569,21 +569,21 @@ export default function SignupPage() {
                 className="space-y-4"
               >
                 <div>
-                  <label className="mb-2 block text-xs font-medium text-zinc-400">Create a password</label>
+                  <label className="mb-2 block text-xs font-medium text-muted-foreground">Create a password</label>
                   <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                    <Lock className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => { setPassword(e.target.value); setError(''); }}
                       placeholder="At least 8 characters"
                       autoFocus
-                      className="w-full rounded-xl border border-white/10 bg-white/5 py-3.5 pl-11 pr-11 text-sm text-white placeholder-zinc-500 outline-none transition-all focus:border-violet-500/50 focus:bg-white/10 focus:ring-2 focus:ring-violet-500/30"
+                      className="w-full rounded-xl border border-border bg-card py-3.5 pl-11 pr-11 text-sm text-foreground placeholder-muted-foreground outline-none transition-all focus:border-primary/50 focus:bg-accent focus:ring-2 focus:ring-primary/30"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                     </button>
@@ -600,20 +600,20 @@ export default function SignupPage() {
                           className={`h-1 flex-1 rounded-full transition-all ${
                             i <= getPasswordStrength(password).score
                               ? getPasswordStrength(password).color
-                              : 'bg-white/10'
+                              : 'bg-accent'
                           }`}
                         />
                       ))}
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className={`
-                        ${getPasswordStrength(password).label === 'Weak' ? 'text-red-400' : ''}
-                        ${getPasswordStrength(password).label === 'Fair' ? 'text-amber-400' : ''}
-                        ${getPasswordStrength(password).label === 'Strong' ? 'text-emerald-400' : ''}
+                        ${getPasswordStrength(password).label === 'Weak' ? 'text-red-500 dark:text-red-400' : ''}
+                        ${getPasswordStrength(password).label === 'Fair' ? 'text-amber-500 dark:text-amber-400' : ''}
+                        ${getPasswordStrength(password).label === 'Strong' ? 'text-emerald-500 dark:text-emerald-400' : ''}
                       `}>
                         {getPasswordStrength(password).label}
                       </span>
-                      <span className="text-zinc-500">Use 8+ chars with mix of letters, numbers & symbols</span>
+                      <span className="text-muted-foreground">Use 8+ chars with mix of letters, numbers & symbols</span>
                     </div>
                   </div>
                 )}
@@ -621,7 +621,7 @@ export default function SignupPage() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => { setStep('username'); setError(''); }}
-                    className="rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 text-sm text-zinc-400 transition-all hover:bg-white/10"
+                    className="rounded-xl border border-border bg-card px-5 py-3.5 text-sm text-muted-foreground transition-all hover:bg-accent"
                   >
                     Back
                   </button>
@@ -648,21 +648,21 @@ export default function SignupPage() {
                 className="space-y-5"
               >
                 {/* Summary */}
-                <div className="rounded-xl border border-white/5 bg-white/5 p-4 space-y-3">
-                  <div className="flex items-center gap-2.5 text-sm text-zinc-300">
-                    <Mail className="size-4 text-violet-400" />
+                <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+                  <div className="flex items-center gap-2.5 text-sm text-foreground">
+                    <Mail className="size-4 text-primary" />
                     <span className="truncate">{email}</span>
-                    <Check className="size-3.5 text-emerald-400 ml-auto" />
+                    <Check className="size-3.5 text-emerald-500 dark:text-emerald-400 ml-auto" />
                   </div>
-                  <div className="flex items-center gap-2.5 text-sm text-zinc-300">
-                    <span className="size-4 text-center text-cyan-400 font-bold text-xs">@</span>
+                  <div className="flex items-center gap-2.5 text-sm text-foreground">
+                    <span className="size-4 text-center text-cyan-500 dark:text-cyan-400 font-bold text-xs">@</span>
                     <span>{username}</span>
-                    <Check className="size-3.5 text-emerald-400 ml-auto" />
+                    <Check className="size-3.5 text-emerald-500 dark:text-emerald-400 ml-auto" />
                   </div>
-                  <div className="flex items-center gap-2.5 text-sm text-zinc-300">
-                    <Lock className="size-4 text-cyan-400" />
+                  <div className="flex items-center gap-2.5 text-sm text-foreground">
+                    <Lock className="size-4 text-cyan-500 dark:text-cyan-400" />
                     <span>Password set</span>
-                    <Check className="size-3.5 text-emerald-400 ml-auto" />
+                    <Check className="size-3.5 text-emerald-500 dark:text-emerald-400 ml-auto" />
                   </div>
                 </div>
 
@@ -671,7 +671,7 @@ export default function SignupPage() {
                   <div className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border transition-all ${
                     agreedToPolicy
                       ? 'border-violet-500 bg-violet-600'
-                      : 'border-white/20 bg-white/5 group-hover:border-white/30'
+                      : 'border-border bg-card group-hover:border-primary/20'
                   }`}>
                     {agreedToPolicy && <Check className="size-3 text-white" />}
                   </div>
@@ -681,12 +681,12 @@ export default function SignupPage() {
                     onChange={(e) => { setAgreedToPolicy(e.target.checked); setError(''); }}
                     className="sr-only"
                   />
-                  <span className="text-sm leading-relaxed text-zinc-400">
+                  <span className="text-sm leading-relaxed text-muted-foreground">
                     I agree to the{' '}
-                    <a href="#" className="text-violet-400 hover:text-violet-300 underline underline-offset-2">
+                    <a href="#" className="text-primary hover:text-primary/80 underline underline-offset-2">
                       Privacy Policy
                     </a>{' '}and{' '}
-                    <a href="#" className="text-violet-400 hover:text-violet-300 underline underline-offset-2">
+                    <a href="#" className="text-primary hover:text-primary/80 underline underline-offset-2">
                       Terms of Service
                     </a>
                     . I understand that my data is protected by end-to-end encryption and Row Level Security.
@@ -696,7 +696,7 @@ export default function SignupPage() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => { setStep('password'); setError(''); }}
-                    className="rounded-xl border border-white/10 bg-white/5 px-5 py-3.5 text-sm text-zinc-400 transition-all hover:bg-white/10"
+                    className="rounded-xl border border-border bg-card px-5 py-3.5 text-sm text-muted-foreground transition-all hover:bg-accent"
                   >
                     Back
                   </button>
@@ -730,12 +730,12 @@ export default function SignupPage() {
               >
                 <div className="flex justify-center">
                   <div className="flex size-16 items-center justify-center rounded-full bg-violet-600/10 border border-violet-500/20">
-                    <KeyRound className="size-7 text-violet-400" />
+                    <KeyRound className="size-7 text-primary" />
                   </div>
                 </div>
 
                 <div className="text-center">
-                  <p className="text-sm text-zinc-400">
+                  <p className="text-sm text-muted-foreground">
                     Check your email for an 8-digit verification code
                   </p>
                 </div>
@@ -759,14 +759,14 @@ export default function SignupPage() {
 
                 <div className="text-center">
                   {resendCooldown > 0 ? (
-                    <p className="text-xs text-zinc-500">
-                      Resend code in <span className="text-violet-400">{resendCooldown}s</span>
+                    <p className="text-xs text-muted-foreground">
+                      Resend code in <span className="text-primary">{resendCooldown}s</span>
                     </p>
                   ) : (
                     <button
                       onClick={handleResendOtp}
                       disabled={isLoading}
-                      className="text-xs text-violet-400 hover:text-violet-300 transition-colors"
+                      className="text-xs text-primary hover:text-primary/80 transition-colors"
                     >
                       Didn&apos;t get a code? Resend
                     </button>
@@ -774,8 +774,8 @@ export default function SignupPage() {
                 </div>
 
                 <div className="flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
-                  <AlertCircle className="size-4 shrink-0 text-amber-400" />
-                  <span className="text-xs text-amber-200">
+                  <AlertCircle className="size-4 shrink-0 text-amber-500 dark:text-amber-400" />
+                  <span className="text-xs text-amber-700 dark:text-amber-200">
                     Your account is locked until you verify your email. This protects your data from unauthorized access. If your code has expired, click Resend to get a new one.
                   </span>
                 </div>
@@ -793,10 +793,10 @@ export default function SignupPage() {
               >
                 <div className="flex justify-center">
                   <div className="flex size-16 items-center justify-center rounded-full bg-emerald-600/10 border border-emerald-500/20">
-                    <Check className="size-7 text-emerald-400" />
+                    <Check className="size-7 text-emerald-500 dark:text-emerald-400" />
                   </div>
                 </div>
-                <p className="text-sm text-zinc-400">
+                <p className="text-sm text-muted-foreground">
                   Your email has been verified. You can now sign in with your credentials.
                 </p>
                 <button
@@ -812,11 +812,11 @@ export default function SignupPage() {
 
           {/* Toggle login */}
           {step !== 'success' && step !== 'verify' && (
-            <div className="mt-8 text-center text-sm text-zinc-400">
+            <div className="mt-8 text-center text-sm text-muted-foreground">
               Already have an account?{' '}
               <button
                 onClick={() => window.location.href = '/login'}
-                className="text-violet-400 hover:text-violet-300 transition-colors font-medium"
+                className="text-primary hover:text-primary/80 transition-colors font-medium"
               >
                 Log in
               </button>
@@ -825,8 +825,8 @@ export default function SignupPage() {
 
           {/* Security notice */}
           <div className="mt-6 flex items-center justify-center gap-1.5">
-            <Shield className="size-3 text-zinc-600" />
-            <span className="text-[10px] text-zinc-600">
+            <Shield className="size-3 text-muted-foreground/60" />
+            <span className="text-[10px] text-muted-foreground/60">
               Protected by Supabase RLS, end-to-end encryption &amp; email verification
             </span>
           </div>

@@ -84,7 +84,7 @@ function OTPInput({ value, onChange, disabled }: {
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={handlePaste}
           disabled={disabled}
-          className="size-11 rounded-lg border border-white/10 bg-white/5 text-center text-lg font-bold text-white outline-none transition-all focus:border-violet-500/50 focus:bg-white/10 focus:ring-1 focus:ring-violet-500/30 disabled:opacity-50"
+          className="size-11 rounded-lg border border-border bg-card text-center text-lg font-bold text-foreground outline-none transition-all focus:border-primary/50 focus:bg-accent focus:ring-1 focus:ring-primary/30 disabled:opacity-50"
         />
       ))}
     </div>
@@ -367,7 +367,7 @@ export function AuthModal() {
                 ? 'w-8 bg-emerald-500'
                 : i === activeIndex
                 ? 'w-8 bg-violet-500'
-                : 'w-4 bg-white/10'
+                : 'w-4 bg-accent'
             }`}
           />
         ))}
@@ -397,11 +397,11 @@ export function AuthModal() {
             transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
             className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2"
           >
-            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#0f0f1a] shadow-2xl shadow-black/50">
+            <div className="relative overflow-hidden rounded-2xl border border-border bg-background shadow-2xl shadow-black/20 dark:shadow-black/50">
               {/* Close button */}
               <button
                 onClick={handleClose}
-                className="absolute right-3 top-3 z-10 flex size-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
+                className="absolute right-3 top-3 z-10 flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
                 <X className="size-4" />
               </button>
@@ -413,37 +413,37 @@ export function AuthModal() {
                 {/* Header */}
                 <div className="mb-4 text-center">
                   <div className="mx-auto mb-4 flex items-center justify-center">
-                    <img src="/logo-transparent.png" alt="Eesha AI" className="h-12 w-auto object-contain" />
+                    <img src="/splash-screen.png" alt="Eesha AI" className="h-12 w-auto object-contain" />
                   </div>
 
                   {view === 'login' ? (
                     <>
-                      <h2 className="text-xl font-bold text-white">Welcome back</h2>
-                      <p className="mt-2 text-sm text-zinc-400">Sign in to continue where you left off.</p>
+                      <h2 className="text-xl font-bold text-foreground">Welcome back</h2>
+                      <p className="mt-2 text-sm text-muted-foreground">Sign in to continue where you left off.</p>
                     </>
                   ) : step === 'success' ? (
                     <>
                       <h2 className="text-xl font-bold text-emerald-400">Email Verified!</h2>
-                      <p className="mt-2 text-sm text-zinc-400">Your account is ready. Sign in to start using Eesha AI.</p>
+                      <p className="mt-2 text-sm text-muted-foreground">Your account is ready. Sign in to start using Eesha AI.</p>
                     </>
                   ) : step === 'verify' ? (
                     <>
-                      <h2 className="text-xl font-bold text-white">Verify your email</h2>
-                      <p className="mt-2 text-sm text-zinc-400">
-                        Enter the 8-digit code sent to <strong className="text-white">{email}</strong>
+                      <h2 className="text-xl font-bold text-foreground">Verify your email</h2>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        Enter the 8-digit code sent to <strong className="text-foreground">{email}</strong>
                       </p>
                     </>
                   ) : isCreditExpired ? (
                     <>
-                      <h2 className="text-xl font-bold text-white">Free messages used up</h2>
-                      <p className="mt-2 text-sm text-zinc-400">
+                      <h2 className="text-xl font-bold text-foreground">Free messages used up</h2>
+                      <p className="mt-2 text-sm text-muted-foreground">
                         You&apos;ve used all {FREE_TIER_MAX} free messages. Create an account for unlimited access.
                       </p>
                     </>
                   ) : (
                     <>
-                      <h2 className="text-xl font-bold text-white">Create your free account</h2>
-                      <p className="mt-2 text-sm text-zinc-400">Sign up to unlock unlimited AI conversations.</p>
+                      <h2 className="text-xl font-bold text-foreground">Create your free account</h2>
+                      <p className="mt-2 text-sm text-muted-foreground">Sign up to unlock unlimited AI conversations.</p>
                     </>
                   )}
                 </div>
@@ -480,7 +480,7 @@ export function AuthModal() {
                           <button
                             onClick={handleGithubSignIn}
                             disabled={isLoading}
-                            className="mb-3 flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-white/10 hover:border-white/20 disabled:opacity-50"
+                            className="mb-3 flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground transition-all hover:bg-accent hover:border-primary/20 disabled:opacity-50"
                           >
                             <Github className="size-5" />
                             Continue with GitHub
@@ -490,26 +490,26 @@ export function AuthModal() {
                         {hasGithub && (
                           <div className="relative my-3">
                             <div className="absolute inset-0 flex items-center">
-                              <div className="w-full border-t border-white/10" />
+                              <div className="w-full border-t border-border" />
                             </div>
                             <div className="relative flex justify-center text-xs">
-                              <span className="bg-[#0f0f1a] px-3 text-zinc-500">or sign up with email</span>
+                              <span className="bg-background px-3 text-muted-foreground">or sign up with email</span>
                             </div>
                           </div>
                         )}
 
                         <div className="space-y-3">
                           <div>
-                            <label className="mb-1.5 block text-xs font-medium text-zinc-400">Email address</label>
+                            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Email address</label>
                             <div className="relative">
-                              <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                              <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                               <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => { setEmail(e.target.value); setError(''); }}
                                 placeholder="you@example.com"
                                 autoFocus
-                                className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition-all focus:border-violet-500/50 focus:bg-white/10 focus:ring-1 focus:ring-violet-500/30"
+                                className="w-full rounded-xl border border-border bg-card py-3 pl-10 pr-4 text-sm text-foreground placeholder-muted-foreground outline-none transition-all focus:border-primary/50 focus:bg-accent focus:ring-1 focus:ring-primary/30"
                               />
                             </div>
                           </div>
@@ -536,21 +536,21 @@ export function AuthModal() {
                       >
                         <div className="space-y-3">
                           <div>
-                            <label className="mb-1.5 block text-xs font-medium text-zinc-400">Create a password</label>
+                            <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Create a password</label>
                             <div className="relative">
-                              <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                              <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                               <input
                                 type={showPassword ? 'text' : 'password'}
                                 value={password}
                                 onChange={(e) => { setPassword(e.target.value); setError(''); }}
                                 placeholder="At least 8 characters"
                                 autoFocus
-                                className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-10 text-sm text-white placeholder-zinc-500 outline-none transition-all focus:border-violet-500/50 focus:bg-white/10 focus:ring-1 focus:ring-violet-500/30"
+                                className="w-full rounded-xl border border-border bg-card py-3 pl-10 pr-10 text-sm text-foreground placeholder-muted-foreground outline-none transition-all focus:border-primary/50 focus:bg-accent focus:ring-1 focus:ring-primary/30"
                               />
                               <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                               >
                                 {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                               </button>
@@ -567,7 +567,7 @@ export function AuthModal() {
                                     className={`h-1 flex-1 rounded-full transition-all ${
                                       i <= getPasswordStrength(password).score
                                         ? getPasswordStrength(password).color
-                                        : 'bg-white/10'
+                                        : 'bg-accent'
                                     }`}
                                   />
                                 ))}
@@ -580,7 +580,7 @@ export function AuthModal() {
                                 `}>
                                   {getPasswordStrength(password).label}
                                 </span>
-                                <span className="text-zinc-500">Use 8+ chars with mix of letters, numbers & symbols</span>
+                                <span className="text-muted-foreground">Use 8+ chars with mix of letters, numbers & symbols</span>
                               </div>
                             </div>
                           )}
@@ -588,7 +588,7 @@ export function AuthModal() {
                           <div className="flex gap-2">
                             <button
                               onClick={() => { setStep('email'); setError(''); }}
-                              className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400 transition-all hover:bg-white/10"
+                              className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground transition-all hover:bg-accent"
                             >
                               Back
                             </button>
@@ -616,13 +616,13 @@ export function AuthModal() {
                       >
                         <div className="space-y-4">
                           {/* Summary */}
-                          <div className="rounded-xl border border-white/5 bg-white/5 p-4 space-y-2">
-                            <div className="flex items-center gap-2 text-sm text-zinc-300">
-                              <Mail className="size-4 text-violet-400" />
+                          <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+                            <div className="flex items-center gap-2 text-sm text-foreground/90">
+                              <Mail className="size-4 text-primary" />
                               <span className="truncate">{email}</span>
                               <Check className="size-3 text-emerald-400 ml-auto" />
                             </div>
-                            <div className="flex items-center gap-2 text-sm text-zinc-300">
+                            <div className="flex items-center gap-2 text-sm text-foreground/90">
                               <Lock className="size-4 text-cyan-400" />
                               <span>Password set</span>
                               <Check className="size-3 text-emerald-400 ml-auto" />
@@ -634,7 +634,7 @@ export function AuthModal() {
                             <div className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border transition-all ${
                               agreedToPolicy
                                 ? 'border-violet-500 bg-violet-600'
-                                : 'border-white/20 bg-white/5 group-hover:border-white/30'
+                                : 'border-border bg-card group-hover:border-primary/20'
                             }`}>
                               {agreedToPolicy && <Check className="size-3 text-white" />}
                             </div>
@@ -644,12 +644,12 @@ export function AuthModal() {
                               onChange={(e) => { setAgreedToPolicy(e.target.checked); setError(''); }}
                               className="sr-only"
                             />
-                            <span className="text-xs leading-relaxed text-zinc-400">
+                            <span className="text-xs leading-relaxed text-muted-foreground">
                               I agree to the{' '}
-                              <a href="#" className="text-violet-400 hover:text-violet-300 underline underline-offset-2">
+                              <a href="#" className="text-primary hover:text-primary/80 underline underline-offset-2">
                                 Privacy Policy
                               </a>{' '}and{' '}
-                              <a href="#" className="text-violet-400 hover:text-violet-300 underline underline-offset-2">
+                              <a href="#" className="text-primary hover:text-primary/80 underline underline-offset-2">
                                 Terms of Service
                               </a>
                               . I understand that my data is protected by end-to-end encryption and Row Level Security.
@@ -659,7 +659,7 @@ export function AuthModal() {
                           <div className="flex gap-2">
                             <button
                               onClick={() => { setStep('password'); setError(''); }}
-                              className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-zinc-400 transition-all hover:bg-white/10"
+                              className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground transition-all hover:bg-accent"
                             >
                               Back
                             </button>
@@ -695,12 +695,12 @@ export function AuthModal() {
                           {/* Shield icon */}
                           <div className="flex justify-center">
                             <div className="flex size-16 items-center justify-center rounded-full bg-violet-600/10 border border-violet-500/20">
-                              <KeyRound className="size-7 text-violet-400" />
+                              <KeyRound className="size-7 text-primary" />
                             </div>
                           </div>
 
                           <div className="text-center">
-                            <p className="text-sm text-zinc-400">
+                            <p className="text-sm text-muted-foreground">
                               Check your email for an 8-digit verification code
                             </p>
                           </div>
@@ -727,14 +727,14 @@ export function AuthModal() {
                           {/* Resend */}
                           <div className="text-center">
                             {resendCooldown > 0 ? (
-                              <p className="text-xs text-zinc-500">
-                                Resend code in <span className="text-violet-400">{resendCooldown}s</span>
+                              <p className="text-xs text-muted-foreground">
+                                Resend code in <span className="text-primary">{resendCooldown}s</span>
                               </p>
                             ) : (
                               <button
                                 onClick={handleResendOtp}
                                 disabled={isLoading}
-                                className="text-xs text-violet-400 hover:text-violet-300 transition-colors"
+                                className="text-xs text-primary hover:text-primary/80 transition-colors"
                               >
                                 Didn&apos;t get a code? Resend
                               </button>
@@ -766,7 +766,7 @@ export function AuthModal() {
                               <Check className="size-7 text-emerald-400" />
                             </div>
                           </div>
-                          <p className="text-sm text-zinc-400">
+                          <p className="text-sm text-muted-foreground">
                             Your email has been verified. You can now sign in with your credentials.
                           </p>
                           <button
@@ -795,7 +795,7 @@ export function AuthModal() {
                       <button
                         onClick={handleGithubSignIn}
                         disabled={isLoading}
-                        className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-white/10 hover:border-white/20 disabled:opacity-50"
+                        className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm font-medium text-foreground transition-all hover:bg-accent hover:border-primary/20 disabled:opacity-50"
                       >
                         <Github className="size-5" />
                         Sign in with GitHub
@@ -805,45 +805,45 @@ export function AuthModal() {
                     {hasGithub && (
                       <div className="relative my-3">
                         <div className="absolute inset-0 flex items-center">
-                          <div className="w-full border-t border-white/10" />
+                          <div className="w-full border-t border-border" />
                         </div>
                         <div className="relative flex justify-center text-xs">
-                          <span className="bg-[#0f0f1a] px-3 text-zinc-500">or sign in with email</span>
+                          <span className="bg-background px-3 text-muted-foreground">or sign in with email</span>
                         </div>
                       </div>
                     )}
 
                     <div className="space-y-3">
                       <div>
-                        <label className="mb-1.5 block text-xs font-medium text-zinc-400">Email address</label>
+                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Email address</label>
                         <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                          <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                           <input
                             type="email"
                             value={email}
                             onChange={(e) => { setEmail(e.target.value); setError(''); }}
                             placeholder="you@example.com"
                             autoFocus
-                            className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-500 outline-none transition-all focus:border-violet-500/50 focus:bg-white/10 focus:ring-1 focus:ring-violet-500/30"
+                            className="w-full rounded-xl border border-border bg-card py-3 pl-10 pr-4 text-sm text-foreground placeholder-muted-foreground outline-none transition-all focus:border-primary/50 focus:bg-accent focus:ring-1 focus:ring-primary/30"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <label className="mb-1.5 block text-xs font-medium text-zinc-400">Password</label>
+                        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Password</label>
                         <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-500" />
+                          <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                           <input
                             type={showPassword ? 'text' : 'password'}
                             value={password}
                             onChange={(e) => { setPassword(e.target.value); setError(''); }}
                             placeholder="Enter your password"
-                            className="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-10 text-sm text-white placeholder-zinc-500 outline-none transition-all focus:border-violet-500/50 focus:bg-white/10 focus:ring-1 focus:ring-violet-500/30"
+                            className="w-full rounded-xl border border-border bg-card py-3 pl-10 pr-10 text-sm text-foreground placeholder-muted-foreground outline-none transition-all focus:border-primary/50 focus:bg-accent focus:ring-1 focus:ring-primary/30"
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                           >
                             {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                           </button>
@@ -865,14 +865,14 @@ export function AuthModal() {
                 {(view === 'signup' && (step === 'email' || step === 'password') && (isCreditExpired || step === 'email')) && (
                   <div className="mt-5 grid grid-cols-2 gap-2">
                     {[
-                      { icon: Infinity, label: 'Unlimited chats', color: 'text-violet-400' },
+                      { icon: Infinity, label: 'Unlimited chats', color: 'text-primary' },
                       { icon: MessageSquare, label: 'Save history', color: 'text-cyan-400' },
                       { icon: Code2, label: 'Workspace access', color: 'text-emerald-400' },
                       { icon: Terminal, label: 'Terminal access', color: 'text-amber-400' },
                     ].map(({ icon: Icon, label, color }) => (
-                      <div key={label} className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2">
+                      <div key={label} className="flex items-center gap-2 rounded-lg bg-card px-3 py-2">
                         <Icon className={`size-4 ${color}`} />
-                        <span className="text-xs text-zinc-300">{label}</span>
+                        <span className="text-xs text-foreground/90">{label}</span>
                       </div>
                     ))}
                   </div>
@@ -890,13 +890,13 @@ export function AuthModal() {
 
                 {/* Toggle login/signup */}
                 {step !== 'success' && step !== 'verify' && (
-                  <div className="mt-5 text-center text-sm text-zinc-400">
+                  <div className="mt-5 text-center text-sm text-muted-foreground">
                     {view === 'signup' ? (
                       <>
                         Already have an account?{' '}
                         <button
                           onClick={() => switchView('login')}
-                          className="text-violet-400 hover:text-violet-300 transition-colors font-medium"
+                          className="text-primary hover:text-primary/80 transition-colors font-medium"
                         >
                           Log in
                         </button>
@@ -906,7 +906,7 @@ export function AuthModal() {
                         Don&apos;t have an account?{' '}
                         <button
                           onClick={() => switchView('signup')}
-                          className="text-violet-400 hover:text-violet-300 transition-colors font-medium"
+                          className="text-primary hover:text-primary/80 transition-colors font-medium"
                         >
                           Sign up
                         </button>
@@ -917,8 +917,8 @@ export function AuthModal() {
 
                 {/* Security notice */}
                 <div className="mt-4 flex items-center justify-center gap-1.5">
-                  <Shield className="size-3 text-zinc-600" />
-                  <span className="text-[10px] text-zinc-600">
+                  <Shield className="size-3 text-muted-foreground/60" />
+                  <span className="text-[10px] text-muted-foreground/60">
                     Protected by Supabase RLS, end-to-end encryption &amp; email verification
                   </span>
                 </div>

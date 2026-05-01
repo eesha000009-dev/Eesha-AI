@@ -89,7 +89,7 @@ export default function Home() {
       {/* Main content area — TRANSPARENT background so canvas shows through */}
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden" style={{ zIndex: 1 }}>
         {/* Header bar — glass morphism, semi-transparent */}
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/5 dark:border-white/5 bg-[#f8f8ff]/40 dark:bg-[#0a0a14]/50 px-4 backdrop-blur-xl">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background/60 px-4 backdrop-blur-xl">
           <Header />
           <div className="flex items-center gap-1">
             {/* </> toggle — cycles: closed → workspace → terminal → closed */}
@@ -135,7 +135,7 @@ export default function Home() {
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* Chat panel — TRANSPARENT so effects show through */}
           <div className={`flex flex-col min-w-0 overflow-hidden ${
-            hasSidePanel ? 'w-1/2 border-r border-white/5 dark:border-white/5' : 'flex-1'
+            hasSidePanel ? 'w-1/2 border-r border-border' : 'flex-1'
           }`}>
             {hasMessages ? (
               <ChatArea onRegenerate={() => {
@@ -173,7 +173,7 @@ export default function Home() {
                     <div className="w-44 shrink-0 overflow-hidden"><FileExplorer /></div>
                     <div className="flex-1 min-w-0 overflow-hidden"><CodeEditor /></div>
                   </div>
-                  <div className="h-48 shrink-0 border-t border-white/5 dark:border-white/5 overflow-hidden">
+                  <div className="h-48 shrink-0 border-t border-border overflow-hidden">
                     <TerminalPanel />
                   </div>
                 </>

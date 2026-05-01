@@ -58,8 +58,8 @@ interface ChatState {
 }
 
 function getInitialTheme(): ThemeMode {
-  // Always use system preference — no localStorage
-  return 'system';
+  // Default to dark mode
+  return 'dark';
 }
 
 function applyTheme(mode: ThemeMode) {

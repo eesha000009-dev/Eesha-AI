@@ -24,7 +24,7 @@ export function SmokyBackground() {
 
     // Preload logo
     const img = new Image();
-    img.src = '/logo-transparent.png';
+    img.src = '/splash-screen.png';
     img.onload = () => { logoImg = img; };
     if (img.complete) logoImg = img;
 
@@ -44,8 +44,8 @@ export function SmokyBackground() {
         ctx.fillRect(0, 0, w, h);
       } else {
         const bgGrad = ctx.createRadialGradient(w * 0.5, h * 0.5, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.7);
-        bgGrad.addColorStop(0, '#f8f8ff');
-        bgGrad.addColorStop(1, '#f0f0f8');
+        bgGrad.addColorStop(0, '#f5f5fa');
+        bgGrad.addColorStop(1, '#ededf4');
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, w, h);
       }

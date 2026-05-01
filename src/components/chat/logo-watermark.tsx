@@ -25,7 +25,7 @@ export function LogoWatermark({ opacity = 0.15, sizeFraction = 0.4, className = 
       className={`absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden ${className}`}
     >
       <img
-        src="/logo-transparent.png"
+        src="/splash-screen.png"
         alt=""
         className="object-contain animate-breathe-slow"
         style={{

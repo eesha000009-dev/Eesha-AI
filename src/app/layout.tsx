@@ -94,24 +94,8 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  // Use system preference only — no localStorage
-                  var dark = window.matchMedia('(prefers-color-scheme: dark)');
-
-                  function applySystemTheme() {
-                    if (dark.matches) {
-                      document.documentElement.classList.add('dark');
-                    } else {
-                      document.documentElement.classList.remove('dark');
-                    }
-                  }
-
-                  // Apply theme immediately to prevent flash
-                  applySystemTheme();
-
-                  // React to system theme changes in real-time
-                  dark.addEventListener('change', function() {
-                    applySystemTheme();
-                  });
+                  // Default to dark mode
+                  document.documentElement.classList.add('dark');
                 } catch(e) {}
               })();
             `,
