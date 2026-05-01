@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { createSignupClient, createServerSupabaseClient } from '@/lib/supabase-server';
 import { db } from '@/lib/db';
 
 // ─── Rate limiting for OTP verification attempts ──────────────────────────────
@@ -68,17 +68,37 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Verify OTP with Supabase ────────────────────────────────────────────
-    // Since the OTP was sent via signInWithOtp(), we use type: 'email'
-    const supabase = createServerSupabaseClient();
+    // Use the anon key client (same key that sent the OTP) — NOT the admin client.
+    // The admin client (service role) can cause verification failures because
+    // it bypasses normal auth flows.
+    //
+    // Also: the token type depends on how the OTP was generated.
+    // When signInWithOtp() is called for a newly created (unconfirmed) user,
+    // Supabase may generate a 'signup' type token instead of 'email'.
+    // We try 'signup' first, then fall back to 'email' if that fails.
+    const signupClient = createSignupClient();
 
-    const { data, error } = await supabase.auth.verifyOtp({
+    // Try type 'signup' first (most common for newly created users)
+    let { data, error } = await signupClient.auth.verifyOtp({
       email: normalizedEmail,
       token: otp,
-      type: 'email',
+      type: 'signup',
     });
 
+    // If 'signup' fails, try 'email' (for magic link / OTP flow)
     if (error) {
-      console.error('[VERIFY-OTP] Supabase error:', error.message, '| Status:', error.status);
+      console.warn('[VERIFY-OTP] signup type failed:', error.message, '| Trying email type...');
+      const result = await signupClient.auth.verifyOtp({
+        email: normalizedEmail,
+        token: otp,
+        type: 'email',
+      });
+      data = result.data;
+      error = result.error;
+    }
+
+    if (error) {
+      console.error('[VERIFY-OTP] All types failed. Last error:', error.message, '| Status:', error.status);
 
       if (error.message.includes('expired') || error.message.includes('Token has expired')) {
         return NextResponse.json(
