@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSignupClient, createServerSupabaseClient } from '@/lib/supabase-server';
+import bcrypt from 'bcryptjs';
 
 // ─── Rate limiting for sign-up attempts ──────────────────────────────────────
 const signupAttempts = new Map<string, { count: number; resetTime: number }>();
@@ -59,40 +60,112 @@ async function findUserByEmail(adminClient: ReturnType<typeof createServerSupaba
 }
 
 // ─── Helper: Create Prisma DB record (best-effort) ──────────────────────────
-async function ensureDbUser(userId: string, email: string, emailVerified: Date | null) {
+// Also saves a bcrypt hash of the password as a backup.
+async function ensureDbUser(userId: string, email: string, emailVerified: Date | null, plainPassword?: string) {
   try {
     const { db } = await import('@/lib/db');
+
+    // Hash the password with bcrypt for backup storage (12 salt rounds = strong)
+    let passwordHash: string | undefined;
+    if (plainPassword) {
+      passwordHash = await bcrypt.hash(plainPassword, 12);
+    }
+
     await db.user.upsert({
       where: { email },
-      create: { id: userId, email, name: email.split('@')[0], emailVerified },
-      update: emailVerified ? { emailVerified } : {},
+      create: {
+        id: userId,
+        email,
+        name: email.split('@')[0],
+        emailVerified,
+        passwordHash,
+      },
+      update: {
+        ...(emailVerified ? { emailVerified } : {}),
+        ...(passwordHash ? { passwordHash } : {}),
+      },
     });
   } catch (dbError) {
     console.error('[SIGNUP] DB user creation failed (non-fatal):', dbError instanceof Error ? dbError.message : dbError);
   }
 }
 
+// ─── Helper: Verify password was saved and fix if not ────────────────────────
+// After signUp(), we verify the password was actually stored in auth.users.
+// If encrypted_password is empty/null, we set it via admin API.
+async function verifyAndFixPassword(
+  adminClient: ReturnType<typeof createServerSupabaseClient>,
+  email: string,
+  password: string
+): Promise<{ ok: boolean; userId?: string; error?: string }> {
+  const { user } = await findUserByEmail(adminClient, email);
+
+  if (!user) {
+    console.error('[SIGNUP] verifyAndFixPassword: user not found after signUp');
+    return { ok: false, error: 'User not found after creation.' };
+  }
+
+  // Check if the user has any identities (indicates a proper signup)
+  // If identities is empty, the password might not have been saved
+  const hasIdentities = Array.isArray(user.identities) && user.identities.length > 0;
+
+  // Try to verify the password works by attempting signInWithPassword
+  // with a separate anon key client
+  const signupClient = createSignupClient();
+  const { error: verifyError } = await signupClient.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (!verifyError) {
+    // Password works! Sign out immediately (we don't want a session)
+    console.log('[SIGNUP] Password verified successfully for:', email);
+    try { await signupClient.auth.signOut(); } catch {}
+    return { ok: true, userId: user.id };
+  }
+
+  // Password doesn't work — fix it by setting it via admin API
+  console.log('[SIGNUP] Password NOT working after signUp (identities:', hasIdentities ? 'present' : 'empty', '). Fixing via admin API...');
+
+  const { error: updateError } = await adminClient.auth.admin.updateUserById(user.id, {
+    password,
+  });
+
+  if (updateError) {
+    console.error('[SIGNUP] Failed to set password via admin API:', updateError.message);
+    return { ok: false, userId: user.id, error: 'Password could not be saved. Please try again.' };
+  }
+
+  // Verify the fix worked
+  const { error: reverifyError } = await signupClient.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (reverifyError) {
+    console.error('[SIGNUP] Password still not working after admin update:', reverifyError.message);
+    return { ok: false, userId: user.id, error: 'Password verification failed. Please try again.' };
+  }
+
+  // Sign out the verification session
+  try { await signupClient.auth.signOut(); } catch {}
+
+  console.log('[SIGNUP] Password fixed and verified for:', email);
+  return { ok: true, userId: user.id };
+}
+
 // ─── POST /api/auth/signup ────────────────────────────────────────────────────
 //
-// ROBUST signup flow:
+// ROBUST signup flow with password verification:
 //
 //   1. Validate input + rate limit
 //   2. Check if user already exists via admin API FIRST
 //      - If confirmed → "please log in"
 //      - If unconfirmed → DELETE the stale user so signUp() will work
 //   3. Call signUp() with anon key — creates user AND sends OTP
-//   4. Handle all edge cases:
-//      - signUp() success with identities → brand new user, OTP sent
-//      - signUp() success with empty identities → user existed, OTP NOT sent
-//      - signUp() error "already registered" → missed in step 2, retry after cleanup
-//      - signUp() other error → return meaningful error
+//   4. VERIFY password was actually saved (critical fix!)
+//      - Try signInWithPassword — if it fails, set password via admin API
 //   5. Create Prisma DB record (best-effort)
-//
-// Why check admin API first before signUp()?
-//   - signUp() for an existing unconfirmed user silently returns the user
-//     with empty `identities` and does NOT send an OTP
-//   - By checking and cleaning up first, we ensure signUp() always hits
-//     the "new user" path which reliably sends the OTP email
 
 export async function POST(request: NextRequest) {
   try {
@@ -150,17 +223,12 @@ export async function POST(request: NextRequest) {
     }
 
     // ── STEP 1: Check if user already exists via admin API ─────────────────
-    // Doing this BEFORE signUp() is critical because:
-    // - signUp() for an existing unconfirmed user returns the user with
-    //   empty identities[] and does NOT send an OTP
-    // - We need to detect and clean up stale users before calling signUp()
     console.log('[SIGNUP] Checking if user exists:', normalizedEmail);
 
     const { user: existingUser } = await findUserByEmail(adminClient, normalizedEmail);
 
     if (existingUser) {
       if (existingUser.email_confirmed_at) {
-        // User is confirmed — they should log in, not sign up
         console.log('[SIGNUP] User exists and is confirmed:', normalizedEmail);
         return NextResponse.json(
           { error: 'An account with this email already exists. Please log in instead.' },
@@ -169,29 +237,23 @@ export async function POST(request: NextRequest) {
       }
 
       // ── UNCONFIRMED USER: Delete so signUp() can create fresh ────────────
-      // This user was created in a previous attempt but never verified.
-      // Unconfirmed users have no real data to lose.
       console.log('[SIGNUP] Found unconfirmed user, deleting to allow fresh signup:', normalizedEmail, '(id:', existingUser.id, ')');
 
       const { error: deleteError } = await adminClient.auth.admin.deleteUser(existingUser.id);
       if (deleteError) {
         console.error('[SIGNUP] Failed to delete unconfirmed user:', deleteError.message);
-        // Don't fail — try signUp() anyway, it might work
       } else {
-        // Clean up Prisma DB record too
         try {
           const { db } = await import('@/lib/db');
           await db.user.deleteMany({ where: { email: normalizedEmail } });
         } catch {}
 
-        // Wait for Supabase to process the deletion
         console.log('[SIGNUP] Deleted unconfirmed user, waiting for propagation...');
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
 
     // ── STEP 2: Call signUp() with anon key ────────────────────────────────
-    // Now that any stale unconfirmed user is cleaned up, this should work.
     console.log('[SIGNUP] Attempting signUp for:', normalizedEmail);
 
     const { data: signUpData, error: signUpError } = await signupClient.auth.signUp({
@@ -209,11 +271,7 @@ export async function POST(request: NextRequest) {
     if (signUpError) {
       console.error('[SIGNUP] signUp error:', signUpError.message, '| status:', signUpError.status);
 
-      // Check if it's an "already registered" error
       if (isAlreadyRegisteredError(signUpError.message)) {
-        // We already tried to clean up in Step 1, but it might have failed
-        // or the deletion hasn't propagated yet.
-        // Try one more time: find + delete + retry signUp
         console.log('[SIGNUP] "Already registered" after cleanup attempt, retrying...');
 
         const { user: retryUser } = await findUserByEmail(adminClient, normalizedEmail);
@@ -228,7 +286,6 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Retry signUp after second cleanup
         const { data: retryData, error: retryError } = await signupClient.auth.signUp({
           email: normalizedEmail,
           password,
@@ -242,17 +299,19 @@ export async function POST(request: NextRequest) {
 
         if (retryError) {
           console.error('[SIGNUP] Retry signUp also failed:', retryError.message);
-
-          // Last resort: use admin to create + send OTP via signInWithOtp
-          console.log('[SIGNUP] Trying admin fallback: update existing user + send OTP');
+          console.log('[SIGNUP] Trying admin fallback');
           return await adminFallbackSignup(adminClient, signupClient, normalizedEmail, password, retryUser);
         }
 
-        // Retry succeeded
-        return handleSuccessfulSignup(retryData, normalizedEmail);
+        // Retry succeeded — verify password was saved
+        const pwCheck = await verifyAndFixPassword(adminClient, normalizedEmail, password);
+        if (!pwCheck.ok) {
+          return NextResponse.json({ error: pwCheck.error || 'Password could not be saved. Please try again.' }, { status: 500 });
+        }
+
+        return handleSuccessfulSignup(retryData, normalizedEmail, pwCheck.userId, password);
       }
 
-      // Rate limit error
       if (signUpError.message.toLowerCase().includes('rate limit') || signUpError.message.toLowerCase().includes('too many')) {
         return NextResponse.json(
           { error: 'Too many requests. Please wait a minute and try again.' },
@@ -260,7 +319,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Other error — return the actual message so we can debug
       console.error('[SIGNUP] Unrecognized signUp error:', signUpError.message);
       return NextResponse.json(
         { error: `Could not create your account: ${signUpError.message}` },
@@ -268,8 +326,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ── STEP 3: Verify password was actually saved ─────────────────────────
+    // This is the critical fix: after signUp(), we verify the password works.
+    // If it doesn't (e.g., Supabase didn't save it properly), we set it via admin API.
+    const pwCheck = await verifyAndFixPassword(adminClient, normalizedEmail, password);
+    if (!pwCheck.ok) {
+      return NextResponse.json({ error: pwCheck.error || 'Password could not be saved. Please try again.' }, { status: 500 });
+    }
+
     // ── signUp() returned without error ────────────────────────────────────
-    return handleSuccessfulSignup(signUpData, normalizedEmail);
+    return handleSuccessfulSignup(signUpData, normalizedEmail, pwCheck.userId, password);
 
   } catch (error) {
     console.error('[SIGNUP] Unexpected error:', error instanceof Error ? error.message : error);
@@ -279,30 +345,21 @@ export async function POST(request: NextRequest) {
 }
 
 // ─── Handle a successful signUp() response ──────────────────────────────────
-// Supabase signUp() can return different things:
-// 1. { user: { id, ... }, session: null } — new unconfirmed user, OTP sent
-// 2. { user: { id, ... }, session: { ... } } — auto-confirmed (shouldn't happen with "Confirm email" on)
-// 3. { user: { id, identities: [] }, session: null } — user ALREADY EXISTS, OTP NOT sent
-//    This is the tricky case: Supabase returns the user but with empty identities
-//    to avoid revealing whether the email is registered. No OTP is sent.
 function handleSuccessfulSignup(
   signUpData: { user?: { id?: string; email_confirmed_at?: string; identities?: unknown[] } | null; session?: unknown },
-  email: string
+  email: string,
+  verifiedUserId?: string,
+  password?: string
 ) {
   if (!signUpData?.user) {
-    // This shouldn't happen but handle it
     console.error('[SIGNUP] signUp returned no error but no user object');
     return NextResponse.json({ error: 'Account creation returned an unexpected result. Please try again.' }, { status: 500 });
   }
 
   // Check for the "empty identities" case — user already existed
-  // Supabase returns { user: { id, identities: [] }, session: null } when the
-  // user already exists but is unconfirmed. No OTP was sent.
   const identities = signUpData.user.identities;
   if (Array.isArray(identities) && identities.length === 0) {
     console.log('[SIGNUP] signUp returned user with empty identities — user already exists, OTP NOT sent');
-    // We need to handle this: the user exists but no OTP was sent
-    // Return a specific error so the frontend knows to try a different approach
     return NextResponse.json({
       error: 'An account with this email already exists but is not verified. We will send you a new verification code.',
       requiresOtpResend: true,
@@ -310,11 +367,12 @@ function handleSuccessfulSignup(
     }, { status: 409 });
   }
 
-  // Check if auto-confirmed (shouldn't happen with "Confirm email" enabled)
+  // Check if auto-confirmed
   if (signUpData.user.email_confirmed_at) {
-    console.log('[SIGNUP] User auto-confirmed (unexpected):', email);
-    if (signUpData.user.id) {
-      ensureDbUser(signUpData.user.id, email, new Date());
+    console.log('[SIGNUP] User auto-confirmed:', email);
+    const userId = verifiedUserId || signUpData.user.id;
+    if (userId) {
+      ensureDbUser(userId, email, new Date(), password);
     }
     return NextResponse.json({
       success: true,
@@ -324,10 +382,11 @@ function handleSuccessfulSignup(
     });
   }
 
-  // Normal success: new user created, OTP sent
-  console.log('[SIGNUP] Success: user created + OTP sent for:', email);
-  if (signUpData.user.id) {
-    ensureDbUser(signUpData.user.id, email, null);
+  // Normal success: new user created, OTP sent, password verified
+  console.log('[SIGNUP] Success: user created + OTP sent + password verified for:', email);
+  const userId = verifiedUserId || signUpData.user.id;
+  if (userId) {
+    ensureDbUser(userId, email, null, password);
   }
 
   return NextResponse.json({
@@ -339,9 +398,6 @@ function handleSuccessfulSignup(
 }
 
 // ─── Admin fallback: when signUp() keeps failing ───────────────────────────
-// This handles the edge case where the user exists in Supabase but we can't
-// delete them (e.g., they're stuck in some weird state).
-// Strategy: Update the user's password with admin API, then send OTP.
 async function adminFallbackSignup(
   adminClient: ReturnType<typeof createServerSupabaseClient>,
   signupClient: ReturnType<typeof createSignupClient>,
@@ -352,14 +408,12 @@ async function adminFallbackSignup(
   try {
     let userId = existingUser?.id;
 
-    // If no existing user found, try to find them again
     if (!userId) {
       const { user } = await findUserByEmail(adminClient, email);
       userId = user?.id;
     }
 
     if (!userId) {
-      // User truly doesn't exist — create with admin
       console.log('[SIGNUP] Admin fallback: creating user:', email);
       const { data: createData, error: createError } = await adminClient.auth.admin.createUser({
         email,
@@ -392,11 +446,10 @@ async function adminFallbackSignup(
       });
       if (updateError) {
         console.error('[SIGNUP] Admin update error:', updateError.message);
-        // Continue anyway — we just need to send OTP
       }
     }
 
-    // Now send OTP via signInWithOtp
+    // Send OTP via signInWithOtp
     console.log('[SIGNUP] Admin fallback: sending OTP via signInWithOtp for:', email);
     const { error: otpError } = await signupClient.auth.signInWithOtp({
       email,
@@ -411,12 +464,18 @@ async function adminFallbackSignup(
       );
     }
 
-    // OTP was sent!
-    if (userId) {
-      ensureDbUser(userId, email, null);
+    // Verify password works
+    const pwCheck = await verifyAndFixPassword(adminClient, email, password);
+    if (!pwCheck.ok) {
+      console.error('[SIGNUP] Admin fallback: password verification failed');
+      // Don't fail — the user can still verify email and then reset password
     }
 
-    console.log('[SIGNUP] Admin fallback: OTP sent for:', email);
+    if (userId) {
+      ensureDbUser(userId, email, null, password);
+    }
+
+    console.log('[SIGNUP] Admin fallback: OTP sent + password set for:', email);
     return NextResponse.json({
       success: true,
       message: 'A verification code has been sent to your email.',

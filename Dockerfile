@@ -53,6 +53,8 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 # Copy pg module for DB migration
 COPY --from=builder /app/node_modules/pg ./node_modules/pg
+# Copy prisma CLI for runtime schema sync (prisma db push)
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
 # Set environment variables for runtime
 # NOTE: The following MUST be set as HF Spaces Secrets:
@@ -75,6 +77,10 @@ cd /app
 echo "Eesha AI starting on port 7860..."
 echo "Database: PostgreSQL (Supabase)"
 echo "Auth: NextAuth.js"
+
+# Sync Prisma schema to database (adds new columns like passwordHash)
+echo "Syncing database schema..."
+npx prisma db push --skip-generate 2>/dev/null || echo "Warning: DB schema sync failed (non-fatal)"
 
 node server.js
 SQLEOF

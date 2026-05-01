@@ -2,6 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import GithubProvider from "next-auth/providers/github";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { createSignupClient, createServerSupabaseClient } from "@/lib/supabase-server";
 
@@ -34,7 +35,7 @@ export const authOptions: NextAuthOptions = {
         const email = credentials.email.toLowerCase().trim();
 
         try {
-          // ── Verify credentials against Supabase Auth ──────────────────────
+          // ── STEP 1: Try Supabase Auth (primary) ─────────────────────────
           // CRITICAL: Use the anon key client (createSignupClient), NOT the
           // service role client. The service role key does NOT support
           // signInWithPassword() — it always returns "Invalid login credentials".
@@ -46,8 +47,45 @@ export const authOptions: NextAuthOptions = {
 
           if (error) {
             console.error('[AUTH] signInWithPassword error:', error.message, '| status:', error.status);
-            // Map common errors to user-friendly messages
+
+            // ── STEP 2: Fallback to local bcrypt hash ──────────────────────
+            // If Supabase Auth fails (e.g., password not saved in auth.users),
+            // check our local bcrypt hash backup in the Prisma DB.
             if (error.message.includes('Invalid login credentials')) {
+              console.log('[AUTH] Trying local bcrypt fallback for:', email);
+              const localUser = await db.user.findUnique({ where: { email } });
+
+              if (localUser?.passwordHash) {
+                const passwordMatches = await bcrypt.compare(credentials.password, localUser.passwordHash);
+                if (passwordMatches) {
+                  console.log('[AUTH] Local bcrypt match! Syncing password to Supabase Auth...');
+
+                  // Fix the password in Supabase Auth
+                  try {
+                    const adminClient = createServerSupabaseClient();
+                    await adminClient.auth.admin.updateUserById(localUser.id, {
+                      password: credentials.password,
+                    });
+                    console.log('[AUTH] Password synced to Supabase Auth for:', email);
+                  } catch (syncErr) {
+                    console.error('[AUTH] Could not sync password to Supabase:', syncErr);
+                  }
+
+                  // Check email verification
+                  if (!localUser.emailVerified) {
+                    throw new Error("EMAIL_NOT_VERIFIED");
+                  }
+
+                  return {
+                    id: localUser.id,
+                    email: localUser.email,
+                    name: localUser.name || email.split("@")[0],
+                    image: localUser.image,
+                    emailVerified: localUser.emailVerified,
+                  };
+                }
+              }
+
               throw new Error("Invalid email or password.");
             }
             throw new Error("Login failed. Please try again.");
