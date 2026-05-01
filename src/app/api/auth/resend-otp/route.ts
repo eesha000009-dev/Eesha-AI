@@ -10,7 +10,7 @@ const RESEND_COOLDOWN_MS = 60_000;       // 1 minute between resends
 const lastResendTime = new Map<string, number>();
 
 // ─── POST /api/auth/resend-otp ────────────────────────────────────────────────
-// Resends a 6-digit OTP code to the user's email.
+// Resends an OTP code to the user's email.
 // Uses signInWithOtp() which ALWAYS sends a code (never a magic link).
 
 export async function POST(request: NextRequest) {
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Send OTP code via signInWithOtp() ───────────────────────────────────
-    // This ALWAYS sends a 6-digit OTP code to the user's email.
+    // This ALWAYS sends an OTP code to the user's email.
     // shouldCreateUser: false — the user already exists in Supabase Auth.
     const signupClient = createSignupClient();
 

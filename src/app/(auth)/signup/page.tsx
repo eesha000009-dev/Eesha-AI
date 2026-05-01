@@ -36,12 +36,12 @@ function getPasswordStrength(password: string): {
 }
 
 // ─── OTP Input Component ──────────────────────────────────────────────────────
-function OTPInput({ value, onChange, disabled }: {
+function OTPInput({ value, onChange, disabled, digits = 8 }: {
   value: string;
   onChange: (val: string) => void;
   disabled?: boolean;
+  digits?: number;
 }) {
-  const digits = 6;
 
   const handleChange = (index: number, digit: string) => {
     if (!/^\d*$/.test(digit)) return;
@@ -66,7 +66,7 @@ function OTPInput({ value, onChange, disabled }: {
   };
 
   return (
-    <div className="flex justify-center gap-3">
+    <div className="flex justify-center gap-2">
       {Array.from({ length: digits }).map((_, i) => (
         <input
           key={i}
@@ -84,7 +84,7 @@ function OTPInput({ value, onChange, disabled }: {
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={handlePaste}
           disabled={disabled}
-          className="size-14 rounded-xl border border-white/10 bg-white/5 text-center text-xl font-bold text-white outline-none transition-all focus:border-violet-500/50 focus:bg-white/10 focus:ring-2 focus:ring-violet-500/30 disabled:opacity-50"
+          className="size-11 rounded-lg border border-white/10 bg-white/5 text-center text-lg font-bold text-white outline-none transition-all focus:border-violet-500/50 focus:bg-white/10 focus:ring-2 focus:ring-violet-500/30 disabled:opacity-50"
         />
       ))}
     </div>
@@ -210,8 +210,8 @@ export default function SignupPage() {
   // ── Step 4: Verify OTP ───────────────────────────────────────────────────
   const handleVerifyOtp = async () => {
     setError('');
-    if (otp.length !== 6) {
-      setError('Please enter the 6-digit verification code.');
+    if (otp.length !== 8) {
+      setError('Please enter the 8-digit verification code.');
       return;
     }
 
@@ -392,7 +392,7 @@ export default function SignupPage() {
             </h2>
             <p className="mt-2 text-sm text-zinc-400">
               {step === 'success' ? 'Your account is ready. Sign in to start using Eesha AI.' :
-               step === 'verify' ? <>Enter the 6-digit code sent to <strong className="text-white">{email}</strong></> :
+               step === 'verify' ? <>Enter the 8-digit code sent to <strong className="text-white">{email}</strong></> :
                'Sign up to unlock unlimited AI conversations.'}
             </p>
           </div>
@@ -657,15 +657,15 @@ export default function SignupPage() {
 
                 <div className="text-center">
                   <p className="text-sm text-zinc-400">
-                    Check your email for a 6-digit verification code
+                    Check your email for an 8-digit verification code
                   </p>
                 </div>
 
-                <OTPInput value={otp} onChange={setOtp} disabled={isLoading} />
+                <OTPInput value={otp} onChange={setOtp} disabled={isLoading} digits={8} />
 
                 <button
                   onClick={handleVerifyOtp}
-                  disabled={isLoading || otp.length !== 6}
+                  disabled={isLoading || otp.length !== 8}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
@@ -697,7 +697,7 @@ export default function SignupPage() {
                 <div className="flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
                   <AlertCircle className="size-4 shrink-0 text-amber-400" />
                   <span className="text-xs text-amber-200">
-                    Your account is locked until you verify your email. This protects your data from unauthorized access. The code expires after 24 hours.
+                    Your account is locked until you verify your email. This protects your data from unauthorized access. If your code has expired, click Resend to get a new one.
                   </span>
                 </div>
               </motion.div>

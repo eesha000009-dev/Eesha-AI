@@ -40,7 +40,7 @@ function OTPInput({ value, onChange, disabled }: {
   onChange: (val: string) => void;
   disabled?: boolean;
 }) {
-  const digits = 6;
+  const digits = 8;
 
   const handleChange = (index: number, digit: string) => {
     if (!/^\d*$/.test(digit)) return; // Only digits
@@ -66,7 +66,7 @@ function OTPInput({ value, onChange, disabled }: {
   };
 
   return (
-    <div className="flex justify-center gap-2">
+    <div className="flex justify-center gap-1.5">
       {Array.from({ length: digits }).map((_, i) => (
         <input
           key={i}
@@ -84,7 +84,7 @@ function OTPInput({ value, onChange, disabled }: {
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={handlePaste}
           disabled={disabled}
-          className="size-12 rounded-xl border border-white/10 bg-white/5 text-center text-lg font-bold text-white outline-none transition-all focus:border-violet-500/50 focus:bg-white/10 focus:ring-1 focus:ring-violet-500/30 disabled:opacity-50"
+          className="size-11 rounded-lg border border-white/10 bg-white/5 text-center text-lg font-bold text-white outline-none transition-all focus:border-violet-500/50 focus:bg-white/10 focus:ring-1 focus:ring-violet-500/30 disabled:opacity-50"
         />
       ))}
     </div>
@@ -229,8 +229,8 @@ export function AuthModal() {
   // ── Step 4: Verify OTP ───────────────────────────────────────────────────
   const handleVerifyOtp = async () => {
     setError('');
-    if (otp.length !== 6) {
-      setError('Please enter the 6-digit verification code.');
+    if (otp.length !== 8) {
+      setError('Please enter the 8-digit verification code.');
       return;
     }
 
@@ -400,7 +400,7 @@ export function AuthModal() {
                     <>
                       <h2 className="text-xl font-bold text-white">Verify your email</h2>
                       <p className="mt-2 text-sm text-zinc-400">
-                        Enter the 6-digit code sent to <strong className="text-white">{email}</strong>
+                        Enter the 8-digit code sent to <strong className="text-white">{email}</strong>
                       </p>
                     </>
                   ) : isCreditExpired ? (
@@ -671,7 +671,7 @@ export function AuthModal() {
 
                           <div className="text-center">
                             <p className="text-sm text-zinc-400">
-                              Check your email for a 6-digit verification code
+                              Check your email for an 8-digit verification code
                             </p>
                           </div>
 
@@ -681,7 +681,7 @@ export function AuthModal() {
                           {/* Verify button */}
                           <button
                             onClick={handleVerifyOtp}
-                            disabled={isLoading || otp.length !== 6}
+                            disabled={isLoading || otp.length !== 8}
                             className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 px-4 py-3 text-sm font-medium text-white transition-all hover:from-violet-500 hover:to-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {isLoading ? (

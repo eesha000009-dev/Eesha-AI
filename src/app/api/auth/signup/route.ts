@@ -343,7 +343,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Account created. A 6-digit verification code has been sent to your email.',
+      message: 'Account created. A verification code has been sent to your email.',
       email: normalizedEmail,
       emailConfirmed: false,
     });
