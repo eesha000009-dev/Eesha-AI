@@ -31,7 +31,7 @@ export function Header() {
           >
             <PanelLeft className="size-4" />
           </Button>
-          <img src="/logo-transparent.png" alt="Eesha AI" className="h-6 w-auto object-contain" />
+          <img src="/logo-transparent.png" alt="Eesha AI" className="h-9 w-auto object-contain" />
         </>
       )}
       {showTitle && (

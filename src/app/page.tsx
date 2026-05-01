@@ -12,7 +12,7 @@ import { FileExplorer } from '@/components/workspace/file-explorer';
 import { CodeEditor } from '@/components/workspace/code-editor';
 import { TerminalPanel } from '@/components/workspace/terminal';
 import { Button } from '@/components/ui/button';
-import { Code2, Terminal, MessageSquare } from 'lucide-react';
+import { Code2, Terminal } from 'lucide-react';
 import { SmokyBackground } from '@/components/chat/smoky-background';
 
 type ActivePanel = 'chat' | 'workspace' | 'terminal';
@@ -92,30 +92,42 @@ export default function Home() {
         <div className="flex h-11 shrink-0 items-center justify-between border-b border-white/5 dark:border-white/5 bg-background/60 dark:bg-black/40 px-3 backdrop-blur-xl">
           <Header />
           <div className="flex items-center gap-1">
+            {/* </> toggle — cycles: closed → workspace → terminal → closed */}
             <Button
               variant="ghost"
-              size="sm"
-              className={`h-7 gap-1.5 text-xs ${!hasSidePanel ? 'bg-white/10 dark:bg-white/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-              onClick={() => { setShowWorkspace(false); setShowTerminal(false); }}
+              size="icon"
+              className={`size-8 ${hasSidePanel ? 'bg-white/10 dark:bg-white/10 text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}
+              onClick={() => {
+                if (!hasSidePanel) {
+                  setShowWorkspace(true);
+                } else if (showWorkspace) {
+                  setShowWorkspace(false);
+                  setShowTerminal(true);
+                } else {
+                  setShowTerminal(false);
+                }
+              }}
+              title={!hasSidePanel ? 'Open Workspace' : showWorkspace ? 'Switch to Terminal' : 'Close Panel'}
             >
-              <MessageSquare className="size-3" />Chat
+              {!hasSidePanel ? (
+                <Code2 className="size-4" />
+              ) : showWorkspace ? (
+                <Terminal className="size-4" />
+              ) : (
+                <Code2 className="size-4" />
+              )}
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`h-7 gap-1.5 text-xs ${showWorkspace ? 'bg-white/10 dark:bg-white/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-              onClick={toggleWorkspace}
-            >
-              <Code2 className="size-3" />Workspace
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`h-7 gap-1.5 text-xs ${showTerminal ? 'bg-white/10 dark:bg-white/10 text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-              onClick={toggleTerminal}
-            >
-              <Terminal className="size-3" />Terminal
-            </Button>
+            {hasSidePanel && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 text-muted-foreground hover:text-foreground hover:bg-accent"
+                onClick={() => { setShowWorkspace(false); setShowTerminal(false); }}
+                title="Close Panel"
+              >
+                <span className="text-sm leading-none">×</span>
+              </Button>
+            )}
           </div>
         </div>
 
