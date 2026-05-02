@@ -141,8 +141,33 @@ export async function POST(request: NextRequest) {
             specificError = 'Incorrect verification code. Please check the code and try again.';
           }
         } else if (user && !user.confirmation_sent_at) {
-          // No confirmation was ever sent — the user might need to request one
-          specificError = 'No verification code was found for this email. Please go back and sign up again.';
+          // No confirmation was ever recorded — auto-resend OTP and tell the user
+          console.log('[VERIFY-OTP] confirmation_sent_at is null for:', normalizedEmail, '— auto-resending OTP');
+
+          try {
+            const resendSignupClient = createSignupClient();
+            const { error: resendError } = await resendSignupClient.auth.signInWithOtp({
+              email: normalizedEmail,
+              options: { shouldCreateUser: false },
+            });
+
+            if (!resendError) {
+              specificError = 'No active verification code was found for this email. A new code has been sent. Please check your email and try again.';
+            } else {
+              // Retry without shouldCreateUser flag
+              const { error: resendError2 } = await resendSignupClient.auth.signInWithOtp({
+                email: normalizedEmail,
+              });
+
+              if (!resendError2) {
+                specificError = 'No active verification code was found for this email. A new code has been sent. Please check your email and try again.';
+              } else {
+                specificError = 'Could not send a new verification code. Please go back and sign up again.';
+              }
+            }
+          } catch {
+            specificError = 'Could not send a new verification code. Please go back and sign up again.';
+          }
         } else {
           // User not found in Supabase Auth
           specificError = 'No account found with this email. Please sign up first.';

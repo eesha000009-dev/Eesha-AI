@@ -106,8 +106,7 @@ export default function LoginPage() {
           <img src="/splash-screen.png" alt="Eesha AI" className="h-20 w-auto object-contain" />
           <div className="space-y-3">
             <h1 className="text-3xl font-bold text-foreground">
-              Welcome back to<br />
-              <span className="bg-gradient-to-r from-violet-500 to-emerald-500 dark:from-violet-400 dark:to-emerald-400 bg-clip-text text-transparent">Eesha AI</span>.
+              Welcome back.
             </h1>
             <p className="text-base text-muted-foreground max-w-md leading-relaxed">
               Your AI coding partner with multi-agent intelligence. Sign in to continue where you left off.
@@ -155,8 +154,7 @@ export default function LoginPage() {
 
           {/* Mobile logo */}
           <div className="lg:hidden mb-8 flex items-center gap-3">
-            <img src="/splash-screen.png" alt="Eesha AI" className="h-10 w-auto object-contain" />
-            <span className="text-lg font-bold bg-gradient-to-r from-violet-500 to-emerald-500 dark:from-violet-400 dark:to-emerald-400 bg-clip-text text-transparent">Eesha AI</span>
+            <img src="/splash-screen.png" alt="Eesha AI" className="h-12 w-auto object-contain" />
           </div>
 
           {/* Header */}

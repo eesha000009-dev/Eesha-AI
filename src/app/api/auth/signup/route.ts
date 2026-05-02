@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Password must contain at least one number.' }, { status: 400 });
     }
     if (!agreedToPolicy) {
-      return NextResponse.json({ error: 'You must agree to the Eesha AI Privacy Policy and Terms of Service.' }, { status: 400 });
+      return NextResponse.json({ error: 'You must agree to the Privacy Policy and Terms of Service.' }, { status: 400 });
     }
     if (username && typeof username !== 'string') {
       return NextResponse.json({ error: 'Invalid username format.' }, { status: 400 });

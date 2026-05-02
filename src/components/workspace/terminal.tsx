@@ -18,7 +18,7 @@ interface CommandHistoryEntry {
 
 export function TerminalPanel() {
   const [lines, setLines] = useState<TerminalLine[]>([
-    { type: 'system', content: 'Eesha AI Workspace Terminal' },
+    { type: 'system', content: 'Workspace Terminal' },
     { type: 'system', content: 'Working directory: /workspace' },
     { type: 'system', content: 'Type commands below. The terminal syncs with the workspace.' },
     { type: 'system', content: '' },

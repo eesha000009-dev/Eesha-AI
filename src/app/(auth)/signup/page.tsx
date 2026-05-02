@@ -35,7 +35,7 @@ function getPasswordStrength(password: string): {
 }
 
 // ─── OTP Input Component ──────────────────────────────────────────────────────
-function OTPInput({ value, onChange, disabled, digits = 8 }: {
+function OTPInput({ value, onChange, disabled, digits = 6 }: {
   value: string;
   onChange: (val: string) => void;
   disabled?: boolean;
@@ -240,8 +240,8 @@ export default function SignupPage() {
   // ── Step 5: Verify OTP ───────────────────────────────────────────────────
   const handleVerifyOtp = async () => {
     setError('');
-    if (otp.length !== 8) {
-      setError('Please enter the 8-digit verification code.');
+    if (otp.length !== 6) {
+      setError('Please enter the 6-digit verification code.');
       return;
     }
 
@@ -406,8 +406,7 @@ export default function SignupPage() {
 
           {/* Mobile logo */}
           <div className="lg:hidden mb-8 flex items-center gap-3">
-            <img src="/splash-screen.png" alt="Eesha AI" className="h-10 w-auto object-contain" />
-            <span className="text-lg font-bold bg-gradient-to-r from-violet-500 to-emerald-500 dark:from-violet-400 dark:to-emerald-400 bg-clip-text text-transparent">Eesha AI</span>
+            <img src="/splash-screen.png" alt="Eesha AI" className="h-12 w-auto object-contain" />
           </div>
 
           {/* Step indicator */}
@@ -421,8 +420,8 @@ export default function SignupPage() {
                'Create your account'}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              {step === 'success' ? 'Your account is ready. Sign in to start using Eesha AI.' :
-               step === 'verify' ? <>Enter the 8-digit code sent to <strong className="text-foreground">{email}</strong></> :
+              {step === 'success' ? 'Your account is ready. Sign in to get started.' :
+               step === 'verify' ? <>Enter the 6-digit code sent to <strong className="text-foreground">{email}</strong></> :
                'Sign up to unlock unlimited AI conversations.'}
             </p>
           </div>
@@ -736,15 +735,15 @@ export default function SignupPage() {
 
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground">
-                    Check your email for an 8-digit verification code
+                    Check your email for a 6-digit verification code
                   </p>
                 </div>
 
-                <OTPInput value={otp} onChange={setOtp} disabled={isLoading} digits={8} />
+                <OTPInput value={otp} onChange={setOtp} disabled={isLoading} digits={6} />
 
                 <button
                   onClick={handleVerifyOtp}
-                  disabled={isLoading || otp.length !== 8}
+                  disabled={isLoading || otp.length !== 6}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-emerald-600 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:from-violet-500 hover:to-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (

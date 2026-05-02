@@ -22,7 +22,7 @@ export function Header() {
           >
             <PanelLeft className="size-3.5" />
           </Button>
-          <img src="/splash-screen.png" alt="Eesha AI" className="h-6 w-auto object-contain opacity-40" />
+          <img src="/splash-screen.png" alt="Eesha AI" className="h-9 w-auto object-contain opacity-50" />
         </>
       )}
       {showTitle && (

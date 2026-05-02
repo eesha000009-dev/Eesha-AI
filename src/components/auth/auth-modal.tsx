@@ -40,7 +40,7 @@ function OTPInput({ value, onChange, disabled }: {
   onChange: (val: string) => void;
   disabled?: boolean;
 }) {
-  const digits = 8;
+  const digits = 6;
 
   const handleChange = (index: number, digit: string) => {
     if (!/^\d*$/.test(digit)) return; // Only digits
@@ -191,7 +191,7 @@ export function AuthModal() {
   const handlePolicySubmit = async () => {
     setError('');
     if (!agreedToPolicy) {
-      setError('You must agree to the Eesha AI Privacy Policy and Terms of Service.');
+      setError('You must agree to the Privacy Policy and Terms of Service.');
       return;
     }
 
@@ -242,8 +242,8 @@ export function AuthModal() {
   // ── Step 4: Verify OTP ───────────────────────────────────────────────────
   const handleVerifyOtp = async () => {
     setError('');
-    if (otp.length !== 8) {
-      setError('Please enter the 8-digit verification code.');
+    if (otp.length !== 6) {
+      setError('Please enter the 6-digit verification code.');
       return;
     }
 
@@ -424,13 +424,13 @@ export function AuthModal() {
                   ) : step === 'success' ? (
                     <>
                       <h2 className="text-xl font-bold text-emerald-400">Email Verified!</h2>
-                      <p className="mt-2 text-sm text-muted-foreground">Your account is ready. Sign in to start using Eesha AI.</p>
+                      <p className="mt-2 text-sm text-muted-foreground">Your account is ready. Sign in to get started.</p>
                     </>
                   ) : step === 'verify' ? (
                     <>
                       <h2 className="text-xl font-bold text-foreground">Verify your email</h2>
                       <p className="mt-2 text-sm text-muted-foreground">
-                        Enter the 8-digit code sent to <strong className="text-foreground">{email}</strong>
+                        Enter the 6-digit code sent to <strong className="text-foreground">{email}</strong>
                       </p>
                     </>
                   ) : isCreditExpired ? (
@@ -701,7 +701,7 @@ export function AuthModal() {
 
                           <div className="text-center">
                             <p className="text-sm text-muted-foreground">
-                              Check your email for an 8-digit verification code
+                              Check your email for a 6-digit verification code
                             </p>
                           </div>
 
@@ -711,7 +711,7 @@ export function AuthModal() {
                           {/* Verify button */}
                           <button
                             onClick={handleVerifyOtp}
-                            disabled={isLoading || otp.length !== 8}
+                            disabled={isLoading || otp.length !== 6}
                             className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 px-4 py-3 text-sm font-medium text-white transition-all hover:from-violet-500 hover:to-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {isLoading ? (

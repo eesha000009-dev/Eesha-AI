@@ -151,7 +151,7 @@ export function Sidebar() {
         <div className="flex h-full w-[260px] flex-col">
           {/* Header with branding — compact */}
           <div className="flex items-center justify-between px-3 py-2.5">
-            <img src="/splash-screen.png" alt="Eesha AI" className="h-7 w-auto object-contain" />
+            <img src="/splash-screen.png" alt="Eesha AI" className="h-10 w-auto object-contain" />
             <Button
               variant="ghost"
               size="icon"

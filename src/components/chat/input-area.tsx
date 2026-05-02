@@ -61,10 +61,8 @@ export function InputArea({ onSend, onStop, isStreaming }: InputAreaProps) {
   return (
     <div className="shrink-0 px-4 pb-4 pt-2 relative" style={{ zIndex: 2 }}>
       <div className="mx-auto max-w-[720px]">
-        {/* Input container — hero element with gradient border on focus */}
-        <div className={`input-hero relative transition-all duration-300 ${
-          hasContent || isFocused ? 'rounded-2xl' : 'rounded-full'
-        }`}>
+        {/* Input container — always rounded-2xl, cleaner shape */}
+        <div className="input-hero relative transition-all duration-300 rounded-2xl">
           {/* Animated gradient border */}
           <div className={`absolute inset-0 rounded-[inherit] transition-opacity duration-500 ${
             hasContent || isFocused ? 'opacity-100' : 'opacity-0'
@@ -74,10 +72,10 @@ export function InputArea({ onSend, onStop, isStreaming }: InputAreaProps) {
 
           <div className={`relative rounded-[inherit] border transition-all duration-300 ${
             hasContent || isFocused
-              ? 'border-white/10 dark:border-white/8 bg-white/15 dark:bg-white/[0.04] backdrop-blur-2xl'
+              ? 'border-white/10 dark:border-white/8 bg-white/15 dark:bg-white/[0.04] backdrop-blur-2xl shadow-lg shadow-black/10 dark:shadow-black/30'
               : 'border-white/6 dark:border-white/[0.04] bg-white/10 dark:bg-white/[0.03] backdrop-blur-xl'
           }`}>
-            <div className="flex items-end gap-3 px-4 py-3">
+            <div className="flex items-end gap-3 px-5 py-3.5">
               {/* Model indicator — tiny dot */}
               <div className="mb-1 shrink-0 flex items-center gap-2">
                 <motion.div
@@ -104,7 +102,7 @@ export function InputArea({ onSend, onStop, isStreaming }: InputAreaProps) {
                 onBlur={() => setIsFocused(false)}
                 placeholder="What do you want to build?"
                 rows={1}
-                className="max-h-[200px] min-h-[24px] flex-1 resize-none bg-transparent text-[15px] leading-relaxed text-foreground placeholder-foreground/25 outline-none"
+                className="max-h-[200px] min-h-[28px] flex-1 resize-none bg-transparent text-[15px] leading-relaxed text-foreground placeholder-foreground/30 outline-none"
               />
 
               {/* Send / Stop button — elegant minimal style */}
@@ -120,7 +118,7 @@ export function InputArea({ onSend, onStop, isStreaming }: InputAreaProps) {
                   >
                     <button
                       onClick={onStop}
-                      className="flex size-8 items-center justify-center rounded-lg bg-foreground/10 text-foreground/70 transition-all hover:bg-foreground/15 hover:text-foreground"
+                      className="flex size-9 items-center justify-center rounded-xl bg-foreground/10 text-foreground/70 transition-all hover:bg-foreground/15 hover:text-foreground"
                       title="Stop generating"
                     >
                       <Square className="size-3" fill="currentColor" />
@@ -138,9 +136,9 @@ export function InputArea({ onSend, onStop, isStreaming }: InputAreaProps) {
                     <button
                       onClick={handleSubmit}
                       disabled={!hasContent}
-                      className={`flex size-8 items-center justify-center rounded-lg transition-all duration-200 ${
+                      className={`flex size-9 items-center justify-center rounded-xl transition-all duration-200 ${
                         hasContent
-                          ? 'bg-foreground text-background hover:opacity-90'
+                          ? 'bg-gradient-to-br from-violet-600 to-emerald-600 text-white hover:opacity-90 shadow-md shadow-violet-500/20'
                           : 'bg-foreground/8 text-foreground/20 cursor-default'
                       }`}
                       title="Send message"
@@ -155,7 +153,7 @@ export function InputArea({ onSend, onStop, isStreaming }: InputAreaProps) {
         </div>
 
         {/* Bottom info — barely visible */}
-        <div className="mt-2 flex items-center justify-between px-1">
+        <div className="mt-2.5 flex items-center justify-between px-1">
           <div className="flex items-center gap-1.5">
             {!isAuthenticated && creditsRemaining <= 2 && creditsRemaining > 0 && (
               <button

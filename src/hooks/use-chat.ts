@@ -111,7 +111,7 @@ export function useChat() {
             setDeliberating(conversationId, false);
             updateLastAssistantMessage(
               conversationId,
-              `You've used all ${errData.creditsMax || FREE_TIER_MAX} free messages! Sign in for unlimited access to Eesha AI. Click **Log in** or **Sign up** in the header to continue.`
+              `You've used all ${errData.creditsMax || FREE_TIER_MAX} free messages! Sign in for unlimited access. Click **Log in** or **Sign up** in the sidebar to continue.`
             );
             setIsStreaming(false);
             resetAgentStatuses(conversationId);
