@@ -9,6 +9,7 @@ export async function GET() {
   const config = {
     SUPABASE_URL: !!process.env.SUPABASE_URL,
     SUPABASE_SERVICE_KEY: !!process.env.SUPABASE_SERVICE_KEY,
+    SUPABASE_ANON_KEY: !!process.env.SUPABASE_ANON_KEY,
     DATABASE_URL: !!process.env.DATABASE_URL,
     DIRECT_URL: !!process.env.DIRECT_URL,
     NEXTAUTH_SECRET: !!process.env.NEXTAUTH_SECRET,
@@ -21,6 +22,7 @@ export async function GET() {
   };
 
   const allRequired = config.SUPABASE_URL && config.SUPABASE_SERVICE_KEY &&
+                      config.SUPABASE_ANON_KEY &&
                       config.DATABASE_URL && config.NEXTAUTH_SECRET;
 
   // Test Supabase connection
