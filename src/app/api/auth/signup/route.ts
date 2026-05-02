@@ -88,43 +88,6 @@ async function ensureDbUser(userId: string, email: string, emailVerified: Date |
   }
 }
 
-// ─── Helper: Send OTP code via signInWithOtp ────────────────────────────────
-// This ALWAYS sends an OTP code (never a magic link), regardless of the
-// Supabase email template configuration. We try multiple approaches:
-//   1. signInWithOtp({ shouldCreateUser: false }) — user already exists
-//   2. signInWithOtp() without flag — more permissive
-// Returns true if OTP was sent successfully.
-async function sendOtpCode(signupClient: ReturnType<typeof createSignupClient>, email: string): Promise<{ sent: boolean; error?: string }> {
-  // Attempt 1: with shouldCreateUser: false (user already exists)
-  try {
-    const { error } = await signupClient.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: false },
-    });
-    if (!error) {
-      console.log('[SIGNUP] OTP sent via signInWithOtp (shouldCreateUser: false) for:', email);
-      return { sent: true };
-    }
-    console.warn('[SIGNUP] signInWithOtp with shouldCreateUser:false failed:', error.message);
-  } catch (e) {
-    console.warn('[SIGNUP] signInWithOtp attempt 1 exception:', e);
-  }
-
-  // Attempt 2: without shouldCreateUser flag (more permissive)
-  try {
-    const { error } = await signupClient.auth.signInWithOtp({ email });
-    if (!error) {
-      console.log('[SIGNUP] OTP sent via signInWithOtp (no flag) for:', email);
-      return { sent: true };
-    }
-    console.warn('[SIGNUP] signInWithOtp without flag also failed:', error.message);
-    return { sent: false, error: error.message };
-  } catch (e) {
-    console.warn('[SIGNUP] signInWithOtp attempt 2 exception:', e);
-    return { sent: false, error: String(e) };
-  }
-}
-
 // ─── Helper: Verify password was saved and fix if not ────────────────────────
 async function verifyAndFixPassword(
   adminClient: ReturnType<typeof createServerSupabaseClient>,
@@ -182,17 +145,17 @@ async function verifyAndFixPassword(
 
 // ─── POST /api/auth/signup ────────────────────────────────────────────────────
 //
-// BULLETPROOF signup flow:
+// Clean signup flow:
 //
 //   1. Validate input + rate limit
 //   2. Check if user already exists via admin API
 //      - If confirmed → "please log in"
 //      - If unconfirmed → DELETE the stale user so signUp() will work
-//   3. Call signUp() with anon key — creates user AND triggers verification email
-//   4. ALWAYS send OTP via signInWithOtp() — guarantees a CODE is sent
-//      (signUp() might send a link instead of a code depending on template config)
-//   5. Verify password was actually saved (fix via admin API if not)
-//   6. Create Prisma DB record (best-effort)
+//   3. Call signUp() with anon key — creates user AND sends verification email
+//      (ONE email, not two — we no longer call signInWithOtp() after signUp()
+//       because it overrides the signUp confirmation token)
+//   4. Verify password was actually saved (fix via admin API if not)
+//   5. Create Prisma DB record (best-effort)
 
 export async function POST(request: NextRequest) {
   try {
@@ -284,6 +247,17 @@ export async function POST(request: NextRequest) {
     }
 
     // ── STEP 2: Call signUp() with anon key ────────────────────────────────
+    // signUp() creates the user AND sends a verification email.
+    // The verification email will contain either:
+    //   - A 6-digit OTP code (if the "Confirm signup" template uses {{ .Token }})
+    //   - A verification link (if the template uses {{ .ConfirmationURL }})
+    //
+    // We do NOT call signInWithOtp() after signUp() because:
+    //   - It sends a SECOND email, confusing users
+    //   - It OVERRIDES the signUp() confirmation token in auth.users,
+    //     making the code from the first email invalid
+    //   - If the user enters the code from the signUp() email, it fails
+    //     because signInWithOtp() already replaced it
     console.log('[SIGNUP] Attempting signUp for:', normalizedEmail);
 
     const { data: signUpData, error: signUpError } = await signupClient.auth.signUp({
@@ -339,7 +313,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: pwCheck.error || 'Password could not be saved. Please try again.' }, { status: 500 });
         }
 
-        return handleSuccessfulSignup(signupClient, retryData, adminClient, normalizedEmail, pwCheck.userId, password, username);
+        return handleSuccessfulSignup(signUpData, adminClient, normalizedEmail, pwCheck.userId, password, username);
       }
 
       if (signUpError.message.toLowerCase().includes('rate limit') || signUpError.message.toLowerCase().includes('too many')) {
@@ -361,8 +335,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: pwCheck.error || 'Password could not be saved. Please try again.' }, { status: 500 });
     }
 
-    // ── STEP 4: Return success (handleSuccessfulSignup sends OTP) ──────────
-    return handleSuccessfulSignup(signupClient, signUpData, adminClient, normalizedEmail, pwCheck.userId, password, username);
+    // ── STEP 4: Return success ─────────────────────────────────────────────
+    return handleSuccessfulSignup(signUpData, adminClient, normalizedEmail, pwCheck.userId, password, username);
 
   } catch (error) {
     console.error('[SIGNUP] Unexpected error:', error instanceof Error ? error.message : error);
@@ -372,11 +346,9 @@ export async function POST(request: NextRequest) {
 }
 
 // ─── Handle a successful signUp() response ──────────────────────────────────
-// CRITICAL: Always sends an OTP code via signInWithOtp() AFTER signUp().
-// signUp() might send a verification LINK (not a code) depending on the
-// Supabase email template config. signInWithOtp() ALWAYS sends a code.
+// We no longer send a second email via signInWithOtp().
+// signUp() sends ONE verification email — either a code or a link.
 async function handleSuccessfulSignup(
-  signupClient: ReturnType<typeof createSignupClient>,
   signUpData: { user?: { id?: string; email_confirmed_at?: string; identities?: unknown[] } | null; session?: unknown },
   adminClient: ReturnType<typeof createServerSupabaseClient>,
   email: string,
@@ -392,24 +364,15 @@ async function handleSuccessfulSignup(
   // Check for the "empty identities" case — user already existed
   const identities = signUpData.user.identities;
   if (Array.isArray(identities) && identities.length === 0) {
-    console.log('[SIGNUP] signUp returned user with empty identities — user already exists, OTP NOT sent by signUp');
+    console.log('[SIGNUP] signUp returned user with empty identities — user already exists');
 
-    // Still try to send OTP ourselves
-    const otpResult = await sendOtpCode(signupClient, email);
-    if (otpResult.sent) {
-      return NextResponse.json({
-        success: true,
-        message: 'A verification code has been sent to your email.',
-        email,
-        emailConfirmed: false,
-      });
-    }
-
+    // User already exists but is unverified — tell them to check email or resend
     return NextResponse.json({
-      error: 'An account with this email already exists but is not verified. A new verification code has been sent.',
-      requiresOtpResend: true,
+      success: true,
+      message: 'A verification code has been sent to your email. If you don\'t see a code, check for a verification link.',
       email,
-    }, { status: 409 });
+      emailConfirmed: false,
+    });
   }
 
   // Check if auto-confirmed
@@ -427,31 +390,16 @@ async function handleSuccessfulSignup(
     });
   }
 
-  // ── CRITICAL: Always send OTP code via signInWithOtp ─────────────────────
-  // signUp() may have sent a verification LINK, not a code.
-  // signInWithOtp() ALWAYS sends a 6-digit OTP code.
-  console.log('[SIGNUP] Sending guaranteed OTP code via signInWithOtp for:', email);
-
-  // Small delay to avoid Supabase rate limiting the email
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  const otpResult = await sendOtpCode(signupClient, email);
-  if (otpResult.sent) {
-    console.log('[SIGNUP] OTP code sent successfully for:', email);
-  } else {
-    console.error('[SIGNUP] Failed to send OTP code:', otpResult.error);
-    // Don't fail the signup — the user can use "Resend" later
-  }
-
   // Create DB record
   const userId = verifiedUserId || signUpData.user.id;
   if (userId) {
     ensureDbUser(userId, email, null, password, username);
   }
 
+  console.log('[SIGNUP] User created, verification email sent:', email);
   return NextResponse.json({
     success: true,
-    message: 'Account created. A verification code has been sent to your email.',
+    message: 'Account created. Check your email for a verification code or link.',
     email,
     emailConfirmed: false,
   });
@@ -511,15 +459,47 @@ async function adminFallbackSignup(
       }
     }
 
-    // Always send OTP via signInWithOtp — guarantees a code is sent
+    // Send OTP via signInWithOtp — for admin-created users, this is the ONLY
+    // way to send a verification email since admin.createUser() doesn't send one
     console.log('[SIGNUP] Admin fallback: sending OTP via signInWithOtp for:', email);
     await new Promise(resolve => setTimeout(resolve, 500));
-    const otpResult = await sendOtpCode(signupClient, email);
 
-    if (!otpResult.sent) {
-      console.error('[SIGNUP] Admin fallback: OTP send failed:', otpResult.error);
+    let otpSent = false;
+
+    // Attempt 1: with shouldCreateUser: false
+    try {
+      const { error } = await signupClient.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: false },
+      });
+      if (!error) {
+        otpSent = true;
+        console.log('[SIGNUP] Admin fallback: OTP sent (shouldCreateUser: false)');
+      } else {
+        console.warn('[SIGNUP] Admin fallback OTP attempt 1 failed:', error.message);
+      }
+    } catch (e) {
+      console.warn('[SIGNUP] Admin fallback OTP attempt 1 exception:', e);
+    }
+
+    // Attempt 2: without flag
+    if (!otpSent) {
+      try {
+        const { error } = await signupClient.auth.signInWithOtp({ email });
+        if (!error) {
+          otpSent = true;
+          console.log('[SIGNUP] Admin fallback: OTP sent (no flag)');
+        } else {
+          console.error('[SIGNUP] Admin fallback OTP attempt 2 failed:', error.message);
+        }
+      } catch (e) {
+        console.error('[SIGNUP] Admin fallback OTP attempt 2 exception:', e);
+      }
+    }
+
+    if (!otpSent) {
       return NextResponse.json(
-        { error: 'Your account was created but we could not send a verification code. Please try the "Resend" button on the verification page.' },
+        { error: 'Your account was created but we could not send a verification email. Please try the "Resend" button on the verification page.' },
         { status: 500 }
       );
     }
@@ -531,7 +511,7 @@ async function adminFallbackSignup(
       ensureDbUser(userId, email, null, password, username);
     }
 
-    console.log('[SIGNUP] Admin fallback: OTP sent + password set for:', email);
+    console.log('[SIGNUP] Admin fallback: complete for:', email);
     return NextResponse.json({
       success: true,
       message: 'A verification code has been sent to your email.',
