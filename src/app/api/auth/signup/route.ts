@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { db } from '@/lib/db';
+import { dbRest } from '@/lib/db-rest';
 import { createSignupClient } from '@/lib/supabase-server';
 
 // ─── Rate limiting for sign-up attempts ──────────────────────────────────────
@@ -27,15 +27,14 @@ function checkSignupRateLimit(ip: string): { allowed: boolean; retryAfter?: numb
 // Custom auth flow with OTP email verification:
 //
 //   1. Validate input + rate limit
-//   2. Check if email already exists in our `users` table
+//   2. Check if email already exists in our `users` table (via Supabase REST API)
 //   3. Hash the password with bcrypt and store in `users` table
 //      → email, encrypted password (bcrypt hash), username
 //   4. Send OTP verification email via Supabase Auth (email delivery only)
 //   5. Mark email as unverified until user enters the OTP code
 //
-// The `users` table is in Supabase PostgreSQL (via Prisma + DATABASE_URL).
-// We do NOT rely on Supabase Auth for password storage or verification.
-// Supabase Auth is ONLY used to send/verify the OTP email code.
+// Uses Supabase REST API (HTTPS) instead of Prisma (direct PostgreSQL) because
+// HF Spaces is IPv4-only and Supabase's direct DB connection requires IPv6.
 
 export async function POST(request: NextRequest) {
   try {
@@ -87,8 +86,9 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // ── STEP 1: Check if user already exists in our `users` table ───────────
-    const existingUser = await db.user.findUnique({ where: { email: normalizedEmail } });
+    // ── STEP 1: Check if user already exists ───────────────────────────────
+    console.log('[SIGNUP] Checking if user exists:', normalizedEmail);
+    const existingUser = await dbRest.findUserByEmail(normalizedEmail);
 
     if (existingUser) {
       if (existingUser.emailVerified) {
@@ -99,15 +99,12 @@ export async function POST(request: NextRequest) {
         );
       }
       // Not verified yet — update their password and resend verification
+      console.log('[SIGNUP] Updating password for unverified user:', normalizedEmail);
       const newHash = await bcrypt.hash(password, 12);
-      await db.user.update({
-        where: { id: existingUser.id },
-        data: {
-          passwordHash: newHash,
-          name: username || existingUser.name,
-        },
+      await dbRest.updateUser(existingUser.id, {
+        passwordHash: newHash,
+        name: username || existingUser.name,
       });
-      console.log('[SIGNUP] Updated password for unverified user:', normalizedEmail);
 
       // Resend OTP via Supabase Auth
       try {
@@ -132,13 +129,12 @@ export async function POST(request: NextRequest) {
 
     // ── STEP 3: Create user in our `users` table ───────────────────────────
     // Email is marked unverified until the user enters the OTP code.
-    const newUser = await db.user.create({
-      data: {
-        email: normalizedEmail,
-        name: username || normalizedEmail.split('@')[0],
-        passwordHash,
-        emailVerified: null, // Will be set after OTP verification
-      },
+    console.log('[SIGNUP] Creating user in database:', normalizedEmail);
+    const newUser = await dbRest.createUser({
+      email: normalizedEmail,
+      name: username || normalizedEmail.split('@')[0],
+      passwordHash,
+      emailVerified: null, // Will be set after OTP verification
     });
     console.log('[SIGNUP] User created in users table:', normalizedEmail, '| id:', newUser.id);
 
@@ -188,13 +184,11 @@ export async function POST(request: NextRequest) {
     const errStack = error instanceof Error ? error.stack : '';
     console.error('[SIGNUP] UNEXPECTED ERROR:', errMsg);
     console.error('[SIGNUP] Error stack:', errStack);
-    console.error('[SIGNUP] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
 
     if (error instanceof Error) {
-      if (error.message.includes('Unique constraint') || error.message.includes('unique')) {
+      if (error.message.includes('UNIQUE_CONSTRAINT') || error.message.includes('Unique constraint') || error.message.includes('unique') || error.message.includes('duplicate')) {
         return NextResponse.json({ error: 'An account with this email already exists. Please log in instead.' }, { status: 409 });
       }
-      // Return the actual error message so we can debug
       return NextResponse.json({
         error: `Signup error: ${errMsg}`,
         details: errStack?.split('\n').slice(0, 3).join(' | '),

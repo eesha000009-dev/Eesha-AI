@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { dbRest } from '@/lib/db-rest';
 
 // ─── POST /api/auth/check-status ────────────────────────────────────────────
 // Checks whether an email is registered in our `users` table.
-// Used by the login page to give specific error messages after a failed login.
+// Uses Supabase REST API (HTTPS) for database operations.
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    const user = await db.user.findUnique({ where: { email: normalizedEmail } });
+    const user = await dbRest.findUserByEmail(normalizedEmail);
 
     if (!user) {
       return NextResponse.json({
@@ -28,8 +28,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       exists: true,
-      status: 'found',
-      message: 'Account found. Please check your password.',
+      status: user.emailVerified ? 'verified' : 'found',
+      message: user.emailVerified
+        ? 'Your email is verified. You can sign in now.'
+        : 'Account found. Please verify your email.',
     });
 
   } catch (error) {

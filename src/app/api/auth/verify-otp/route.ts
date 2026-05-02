@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSignupClient } from '@/lib/supabase-server';
-import { db } from '@/lib/db';
+import { dbRest } from '@/lib/db-rest';
 
 // ─── Rate limiting for OTP verification attempts ──────────────────────────────
 const otpAttempts = new Map<string, { count: number; resetTime: number }>();
@@ -27,15 +27,7 @@ function checkOtpRateLimit(identifier: string): { allowed: boolean; retryAfter?:
 // ─── POST /api/auth/verify-otp ────────────────────────────────────────────────
 //
 // Verify the OTP code that was sent to the user's email via Supabase Auth.
-//
-// Flow:
-//   1. Call Supabase verifyOtp() to validate the code (email delivery check)
-//   2. If valid → mark email as verified in our `users` table
-//   3. Done — the user can now log in
-//
-// We do NOT call admin.updateUserById() — that wipes passwords (supabase/auth#1578).
-// We do NOT touch the password in our `users` table — it was set during signup.
-// Supabase Auth is ONLY used for OTP validation (email delivery verification).
+// Uses Supabase REST API (HTTPS) for database operations to bypass IPv4 issues.
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Check if user exists in our `users` table ──────────────────────────
-    const user = await db.user.findUnique({ where: { email: normalizedEmail } });
+    const user = await dbRest.findUserByEmail(normalizedEmail);
 
     if (!user) {
       return NextResponse.json({ error: 'No account found with this email. Please sign up first.' }, { status: 404 });
@@ -154,10 +146,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Success — mark email as verified in our `users` table ───────────────
-    await db.user.update({
-      where: { email: normalizedEmail },
-      data: { emailVerified: new Date() },
-    });
+    await dbRest.verifyUserEmail(normalizedEmail);
     console.log('[VERIFY-OTP] Email marked as verified in users table:', normalizedEmail);
 
     return NextResponse.json({

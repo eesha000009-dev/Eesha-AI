@@ -1,15 +1,10 @@
 import type { NextAuthOptions } from "next-auth";
 import GithubProvider from "next-auth/providers/github";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import bcrypt from "bcryptjs";
-import { db } from "@/lib/db";
+import { dbRest } from "@/lib/db-rest";
 
 export const authOptions: NextAuthOptions = {
-  // ─── Database Adapter ────────────────────────────────────────────────────
-  // PrismaAdapter connects to Supabase PostgreSQL via DATABASE_URL.
-  adapter: PrismaAdapter(db),
-
   // ─── Authentication Providers ─────────────────────────────────────────────
   providers: [
     // GitHub OAuth — trusted provider, email is pre-verified by GitHub
@@ -19,8 +14,8 @@ export const authOptions: NextAuthOptions = {
     }),
 
     // Email + Password credentials — verified against our `users` table directly
+    // Uses Supabase REST API (HTTPS) instead of Prisma to bypass IPv4 connectivity issues.
     // We use bcrypt to compare the input password against the encrypted hash stored in the table.
-    // No Supabase Auth signInWithPassword() — we own the auth logic.
     CredentialsProvider({
       id: "credentials",
       name: "Email and Password",
@@ -36,10 +31,10 @@ export const authOptions: NextAuthOptions = {
         const email = credentials.email.toLowerCase().trim();
 
         try {
-          // ── Look up user in our `users` table ────────────────────────────
+          // ── Look up user in our `users` table via REST API ────────────
           console.log('[AUTH] Looking up user in users table:', email);
 
-          const user = await db.user.findUnique({ where: { email } });
+          const user = await dbRest.findUserByEmail(email);
 
           if (!user) {
             console.log('[AUTH] No account found:', email);
@@ -106,7 +101,7 @@ export const authOptions: NextAuthOptions = {
 
   // ─── Callbacks ────────────────────────────────────────────────────────────
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
@@ -122,11 +117,23 @@ export const authOptions: NextAuthOptions = {
     },
 
     async signIn({ user, account }) {
-      if (account?.provider === "github") {
-        return true;
-      }
-      if (account?.provider === "credentials") {
-        return true;
+      // For GitHub OAuth, create user in our `users` table if not exists
+      if (account?.provider === "github" && user.email) {
+        try {
+          const existingUser = await dbRest.findUserByEmail(user.email);
+          if (!existingUser) {
+            // Auto-create GitHub user in our users table
+            console.log('[AUTH] Auto-creating GitHub user in users table:', user.email);
+            await dbRest.createUser({
+              email: user.email,
+              name: user.name || user.email.split('@')[0],
+              passwordHash: '', // GitHub users don't need a password
+              emailVerified: new Date(), // GitHub emails are pre-verified
+            });
+          }
+        } catch (err) {
+          console.error('[AUTH] Error creating GitHub user in users table:', err);
+        }
       }
       return true;
     },
@@ -143,9 +150,6 @@ export const authOptions: NextAuthOptions = {
     },
     async signOut({ session }) {
       console.log(`[AUTH] User signed out: ${session?.user?.email}`);
-    },
-    async createUser({ user }) {
-      console.log(`[AUTH] New user created: ${user.email}`);
     },
   },
 };

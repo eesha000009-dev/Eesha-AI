@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSignupClient } from '@/lib/supabase-server';
-import { db } from '@/lib/db';
+import { dbRest } from '@/lib/db-rest';
 
 // ─── Rate limiting for resend attempts ────────────────────────────────────────
 const resendAttempts = new Map<string, { count: number; resetTime: number }>();
@@ -13,8 +13,7 @@ const lastResendTime = new Map<string, number>();
 // ─── POST /api/auth/resend-otp ────────────────────────────────────────────────
 //
 // Resend verification email via Supabase Auth (email delivery only).
-// We check our `users` table to see if the user exists and is unverified,
-// then use Supabase to resend the OTP code.
+// Uses Supabase REST API (HTTPS) for database operations.
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Check our `users` table first ──────────────────────────────────────
-    const user = await db.user.findUnique({ where: { email: emailKey } });
+    const user = await dbRest.findUserByEmail(emailKey);
 
     if (!user) {
       return NextResponse.json(
