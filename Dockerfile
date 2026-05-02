@@ -61,8 +61,9 @@ COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder /app/scripts ./scripts
 
 # SECURITY: Create non-root user and set permissions
-RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app /app/workspace /app/data
+# The node:20-slim image already has a 'node' user (UID 1000), so we reuse it
+# instead of creating a duplicate user which would cause useradd to fail.
+RUN chown -R node:node /app /app/workspace /app/data
 
 # Set environment variables for runtime
 # NOTE: The following MUST be set as HF Spaces Secrets:
@@ -100,7 +101,7 @@ node server.js
 SQLEOF
 RUN chmod +x /app/start.sh
 
-# SECURITY: Run as non-root user
-USER appuser
+# SECURITY: Run as non-root user (node user already exists in node:20-slim)
+USER node
 
 CMD ["/app/start.sh"]
