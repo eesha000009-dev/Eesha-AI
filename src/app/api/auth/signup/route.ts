@@ -184,12 +184,22 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('[SIGNUP] Unexpected error:', error instanceof Error ? error.message : error);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    const errStack = error instanceof Error ? error.stack : '';
+    console.error('[SIGNUP] UNEXPECTED ERROR:', errMsg);
+    console.error('[SIGNUP] Error stack:', errStack);
+    console.error('[SIGNUP] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+
     if (error instanceof Error) {
       if (error.message.includes('Unique constraint') || error.message.includes('unique')) {
         return NextResponse.json({ error: 'An account with this email already exists. Please log in instead.' }, { status: 409 });
       }
+      // Return the actual error message so we can debug
+      return NextResponse.json({
+        error: `Signup error: ${errMsg}`,
+        details: errStack?.split('\n').slice(0, 3).join(' | '),
+      }, { status: 500 });
     }
-    return NextResponse.json({ error: 'An unexpected error occurred. Please try again.' }, { status: 500 });
+    return NextResponse.json({ error: `Signup error: ${errMsg}` }, { status: 500 });
   }
 }

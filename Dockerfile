@@ -84,9 +84,9 @@ echo "Eesha AI starting on port 7860..."
 echo "Database: PostgreSQL (Supabase)"
 echo "Auth: NextAuth.js"
 
-# Sync Prisma schema to database (adds new columns like passwordHash)
+# Sync Prisma schema to database (creates tables, adds new columns like passwordHash)
 echo "Syncing database schema..."
-npx prisma db push --skip-generate 2>/dev/null || echo "Warning: DB schema sync failed (non-fatal)"
+npx prisma db push --skip-generate 2>&1 || echo "Warning: DB schema sync failed (non-fatal, tables may already exist)"
 
 # Update Supabase email templates to use OTP codes instead of links
 echo "Updating email templates..."
