@@ -92,7 +92,7 @@ export default function LoginPage() {
       <SmokyBackground />
 
       {/* ── Left Panel: Branding (hidden on mobile) ──────────────────────── */}
-      <div className="hidden lg:flex relative z-10 w-1/2 flex-col justify-between p-12 border-r border-[var(--border-subtle)]">
+      <div className="hidden lg:flex relative z-10 w-1/2 flex-col justify-between p-12">
         {/* Back link */}
         <button
           onClick={() => window.location.href = '/'}
@@ -123,8 +123,8 @@ export default function LoginPage() {
               { icon: Infinity, title: 'Unlimited Conversations', desc: 'No caps on messages or sessions' },
             ].map(({ icon: Icon, title, desc }) => (
               <div key={title} className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-violet-600/10 border border-violet-500/20">
-                  <Icon className="size-4 text-violet-500 dark:text-violet-400" />
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                  <Icon className="size-4 text-primary/60" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-foreground">{title}</p>
@@ -265,8 +265,8 @@ export default function LoginPage() {
 
           {/* Security notice */}
           <div className="mt-6 flex items-center justify-center gap-1.5">
-            <Shield className="size-3 text-muted-foreground/60" />
-            <span className="text-[10px] text-muted-foreground/60">
+            <Shield className="size-3 text-foreground/15" />
+            <span className="text-[10px] text-foreground/15">
               Protected by Supabase RLS, end-to-end encryption &amp; email verification
             </span>
           </div>
