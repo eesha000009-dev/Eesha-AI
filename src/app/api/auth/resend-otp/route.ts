@@ -3,19 +3,20 @@ import { createSignupClient, createServerSupabaseClient } from '@/lib/supabase-s
 
 // ─── Rate limiting for resend attempts ────────────────────────────────────────
 const resendAttempts = new Map<string, { count: number; resetTime: number }>();
-const MAX_RESEND_ATTEMPTS = 5;          // per email per window
-const RESEND_WINDOW_MS = 15 * 60_000;   // 15 minutes
-const RESEND_COOLDOWN_MS = 60_000;       // 1 minute between resends
+const MAX_RESEND_ATTEMPTS = 5;
+const RESEND_WINDOW_MS = 15 * 60_000;
+const RESEND_COOLDOWN_MS = 60_000; // 1 minute between resends
 
 const lastResendTime = new Map<string, number>();
 
 // ─── POST /api/auth/resend-otp ────────────────────────────────────────────────
 //
 // Resends an OTP code to the user's email.
-// Uses signInWithOtp() which ALWAYS sends an OTP code (never a magic link),
-// regardless of the Supabase email template configuration.
+// Uses signInWithOtp() which generates tokens of type 'email'.
 //
-// Falls back to admin API if the user can't be found via the anon key.
+// After a resend, the user should enter the NEW code from the new email.
+// The old code (from signUp(), type 'signup') is INVALIDATED because
+// signInWithOtp() overwrites the confirmation_token in auth.users.
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,10 +53,33 @@ export async function POST(request: NextRequest) {
       entry.count++;
     }
 
+    // ── Verify the user exists before sending ───────────────────────────────
+    const adminClient = createServerSupabaseClient();
+    const { data: usersData } = await adminClient.auth.admin.listUsers();
+    const user = usersData?.users?.find(u => u.email?.toLowerCase() === emailKey);
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'No account found with this email. Please sign up first.' },
+        { status: 404 }
+      );
+    }
+
+    // If already verified, tell them to log in
+    if (user.email_confirmed_at) {
+      return NextResponse.json({
+        success: true,
+        message: 'Your email is already verified. You can sign in now.',
+        alreadyVerified: true,
+      });
+    }
+
+    // ── Send OTP via signInWithOtp ──────────────────────────────────────────
+    // This generates a token of type 'email' and OVERRIDES any existing
+    // 'signup' type token from signUp(). The user must use the NEW code.
     const signupClient = createSignupClient();
 
-    // ── Attempt 1: signInWithOtp with shouldCreateUser: false ───────────────
-    // This is the preferred approach — user already exists, just send a code.
+    // Attempt 1: with shouldCreateUser: false (user already exists)
     const { error: otpError1 } = await signupClient.auth.signInWithOtp({
       email: emailKey,
       options: { shouldCreateUser: false },
@@ -66,15 +90,14 @@ export async function POST(request: NextRequest) {
       console.log('[RESEND-OTP] OTP sent (shouldCreateUser: false) for:', emailKey);
       return NextResponse.json({
         success: true,
-        message: 'A new verification code has been sent to your email.',
+        message: 'A new verification code has been sent to your email. Use the NEW code — previous codes are no longer valid.',
+        tokenType: 'email',
       });
     }
 
     console.warn('[RESEND-OTP] Attempt 1 failed:', otpError1.message);
 
-    // ── Attempt 2: signInWithOtp without flag ───────────────────────────────
-    // More permissive — works when the user was created via admin API
-    // or when Supabase can't find the user via the anon key immediately.
+    // Attempt 2: without flag (more permissive)
     const { error: otpError2 } = await signupClient.auth.signInWithOtp({
       email: emailKey,
     });
@@ -84,54 +107,16 @@ export async function POST(request: NextRequest) {
       console.log('[RESEND-OTP] OTP sent (no flag) for:', emailKey);
       return NextResponse.json({
         success: true,
-        message: 'A new verification code has been sent to your email.',
+        message: 'A new verification code has been sent to your email. Use the NEW code — previous codes are no longer valid.',
+        tokenType: 'email',
       });
     }
 
-    console.warn('[RESEND-OTP] Attempt 2 failed:', otpError2.message);
-
-    // ── Attempt 3: Admin API fallback ───────────────────────────────────────
-    // If both signInWithOtp calls fail, the user might not be properly
-    // recognized by the anon key. Use admin API to verify user exists,
-    // then try one more time.
-    try {
-      const adminClient = createServerSupabaseClient();
-      const { data: usersData } = await adminClient.auth.admin.listUsers();
-      const user = usersData?.users?.find(u => u.email?.toLowerCase() === emailKey);
-
-      if (user) {
-        // User exists — try signInWithOtp one more time (sometimes works after admin lookup)
-        const { error: otpError3 } = await signupClient.auth.signInWithOtp({
-          email: emailKey,
-        });
-
-        if (!otpError3) {
-          lastResendTime.set(emailKey, now);
-          console.log('[RESEND-OTP] OTP sent (admin fallback) for:', emailKey);
-          return NextResponse.json({
-            success: true,
-            message: 'A new verification code has been sent to your email.',
-          });
-        }
-
-        console.error('[RESEND-OTP] All attempts failed. User exists but OTP cannot be sent:', otpError3.message);
-        return NextResponse.json(
-          { error: 'Unable to send verification code. Please try again in a few minutes.' },
-          { status: 500 }
-        );
-      } else {
-        return NextResponse.json(
-          { error: 'No account found with this email. Please sign up first.' },
-          { status: 404 }
-        );
-      }
-    } catch (adminError) {
-      console.error('[RESEND-OTP] Admin fallback error:', adminError);
-      return NextResponse.json(
-        { error: 'Unable to send verification code. Please try again in a few minutes.' },
-        { status: 500 }
-      );
-    }
+    console.error('[RESEND-OTP] All attempts failed:', otpError2.message);
+    return NextResponse.json(
+      { error: 'Unable to send verification code. Please wait a minute and try again.' },
+      { status: 500 }
+    );
 
   } catch (error) {
     console.error('[RESEND-OTP] Unexpected error:', error);
