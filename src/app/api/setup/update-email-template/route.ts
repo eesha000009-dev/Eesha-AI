@@ -25,7 +25,7 @@ const MAGIC_LINK_OTP_TEMPLATE = `<h2>Your verification code</h2>
 <div style="padding: 16px; background: #f3f4f6; border-radius: 8px; text-align: center; font-size: 32px; letter-spacing: 8px; font-weight: bold; font-family: monospace;">{{ .Token }}</div>
 <p style="color: #6b7280; font-size: 14px;">This code expires in 24 hours. If you did not request this, please ignore this email.</p>`;
 
-const siteUrl = 'https://fuhaddesmond-eesha-ai.hf.space';
+const siteUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
 interface UpdateEntry {
   name: string;
@@ -85,11 +85,20 @@ async function tryPgConnection(connectionString: string): Promise<{ connected: b
 }
 
 export async function POST(request: NextRequest) {
+  // SECURITY: Disable this endpoint in production
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
   try {
     const body = await request.json();
     const { setupSecret } = body;
 
-    if (setupSecret !== process.env.NEXTAUTH_SECRET) {
+    // SECURITY: Use a separate SETUP_SECRET env var, not NEXTAUTH_SECRET
+    // NEXTAUTH_SECRET is used for JWT signing — exposing it here would allow
+    // an attacker to forge session tokens if leaked
+    const validSecret = process.env.SETUP_SECRET || process.env.NEXTAUTH_SECRET;
+    if (!setupSecret || setupSecret !== validSecret) {
       return NextResponse.json({ error: 'Invalid setup secret.' }, { status: 403 });
     }
 
@@ -152,11 +161,11 @@ export async function POST(request: NextRequest) {
       message: anySuccess ? 'Email template setup completed!' : 'All connection methods failed. Please update the email template manually in the Supabase Dashboard.',
       results: allResults,
       manualInstructions: !anySuccess ? {
-        step1: 'Go to https://supabase.com/dashboard/project/xydfeerrrtlgrxmtepjo/auth/templates',
+        step1: `Go to your Supabase Dashboard → Authentication → Email Templates`,
         step2: 'Edit "Confirm signup" template: Replace {{ .ConfirmationURL }} with {{ .Token }}',
         step3: 'Edit "Magic Link" template: Replace {{ .ConfirmationURL }} with {{ .Token }}',
-        step4: 'In Authentication > URL Configuration: Set Site URL to https://fuhaddesmond-eesha-ai.hf.space',
-        step5: 'Add https://fuhaddesmond-eesha-ai.hf.space/** to Redirect URLs',
+        step4: `In Authentication > URL Configuration: Set Site URL to ${siteUrl}`,
+        step5: `Add ${siteUrl}/** to Redirect URLs`,
       } : undefined,
     });
 

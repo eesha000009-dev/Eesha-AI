@@ -32,7 +32,7 @@ const MAGIC_LINK_OTP_TEMPLATE = `<h2>Your verification code</h2>
 <div style="padding: 16px; background: #f3f4f6; border-radius: 8px; text-align: center; font-size: 32px; letter-spacing: 8px; font-weight: bold; font-family: monospace;">{{ .Token }}</div>
 <p style="color: #6b7280; font-size: 14px;">This code expires in 24 hours. If you did not request this, please ignore this email.</p>`;
 
-const SITE_URL = 'https://fuhaddesmond-eesha-ai.hf.space';
+const SITE_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
 let templatesUpdated = false;
 

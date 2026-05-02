@@ -60,6 +60,10 @@ COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 # Copy email template update script
 COPY --from=builder /app/scripts ./scripts
 
+# SECURITY: Create non-root user and set permissions
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser /app /app/workspace /app/data
+
 # Set environment variables for runtime
 # NOTE: The following MUST be set as HF Spaces Secrets:
 #   DATABASE_URL, DIRECT_URL — Supabase PostgreSQL connection strings
@@ -95,5 +99,8 @@ node scripts/update-email-templates.js 2>/dev/null || echo "Warning: Email templ
 node server.js
 SQLEOF
 RUN chmod +x /app/start.sh
+
+# SECURITY: Run as non-root user
+USER appuser
 
 CMD ["/app/start.sh"]

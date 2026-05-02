@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { createHmac } from "crypto";
 
 // ─── Rate Limiting Configuration ─────────────────────────────────────────────
 
@@ -23,12 +24,18 @@ const RATE_LIMITS: Record<string, { windowMs: number; maxRequests: number; anonM
   workspace: { windowMs: 60_000, maxRequests: 30, anonMaxRequests: 10 },
   // Terminal: authenticated only — anonymous CANNOT access
   terminal: { windowMs: 60_000, maxRequests: 10, anonMaxRequests: 0 },
+  // Auth signup: strict rate limit to prevent abuse
+  signup: { windowMs: 15 * 60_000, maxRequests: 5, anonMaxRequests: 5 },
+  // Auth OTP: moderate rate limit
+  otp: { windowMs: 15 * 60_000, maxRequests: 10, anonMaxRequests: 10 },
+  // Check-status: very strict to prevent email enumeration
+  checkStatus: { windowMs: 15 * 60_000, maxRequests: 3, anonMaxRequests: 3 },
   // Default
   default: { windowMs: 60_000, maxRequests: 60, anonMaxRequests: 30 },
 };
 
 // ─── Free Tier Credits ───────────────────────────────────────────────────────
-// Anonymous users get 5 free messages per session (stored in cookie)
+// Anonymous users get 5 free messages per session (stored in signed cookie)
 const FREE_TIER_MAX = 5;
 const FREE_TIER_COOKIE = "eesha-free-credits";
 
@@ -37,6 +44,9 @@ function getEndpointType(pathname: string): string {
   if (pathname.startsWith("/api/conversations")) return "conversations";
   if (pathname.startsWith("/api/workspace")) return "workspace";
   if (pathname.startsWith("/api/terminal")) return "terminal";
+  if (pathname.startsWith("/api/auth/signup")) return "signup";
+  if (pathname.startsWith("/api/auth/verify-otp") || pathname.startsWith("/api/auth/resend-otp")) return "otp";
+  if (pathname.startsWith("/api/auth/check-status")) return "checkStatus";
   return "default";
 }
 
@@ -73,14 +83,40 @@ function checkRateLimit(identifier: string, endpointType: string, isAnonymous: b
   return { allowed: true };
 }
 
+// ─── Signed Free Tier Cookie ─────────────────────────────────────────────────
+
+function signCookieValue(value: string): string {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) return value; // Fallback for dev
+  const hmac = createHmac('sha256', secret);
+  hmac.update(value);
+  return `${value}.${hmac.digest('hex').slice(0, 16)}`;
+}
+
+function verifyCookieSignature(signed: string): string | null {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) return signed; // Fallback for dev
+  const lastDot = signed.lastIndexOf('.');
+  if (lastDot === -1) return null;
+  const value = signed.slice(0, lastDot);
+  const sig = signed.slice(lastDot + 1);
+  const hmac = createHmac('sha256', secret);
+  hmac.update(value);
+  const expected = hmac.digest('hex').slice(0, 16);
+  if (sig !== expected) return null; // Signature mismatch — tampered cookie
+  return value;
+}
+
 function getFreeCreditsUsed(request: NextRequest): number {
   const cookie = request.cookies.get(FREE_TIER_COOKIE)?.value;
   if (!cookie) return 0;
   try {
-    const parsed = JSON.parse(cookie);
-    return parsed.used || 0;
+    const verifiedValue = verifyCookieSignature(cookie);
+    if (!verifiedValue) return FREE_TIER_MAX; // Tampered cookie = max used
+    const parsed = JSON.parse(verifiedValue);
+    return Math.min(parsed.used || 0, FREE_TIER_MAX); // Cap at max
   } catch {
-    return 0;
+    return FREE_TIER_MAX; // Invalid cookie = treat as used up
   }
 }
 
@@ -107,12 +143,19 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
     "Content-Security-Policy",
     [
       "default-src 'self'",
+      // Note: 'unsafe-inline' and 'unsafe-eval' are needed for Next.js runtime.
+      // TODO: Migrate to nonce-based CSP for production hardening.
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https: blob:",
       "font-src 'self' data:",
       "connect-src 'self' https://*.supabase.co https://integrate.api.nvidia.com https://*.googleapis.com https://*.github.com",
       "frame-ancestors 'none'",
+      // Block form submissions to external origins
+      "form-action 'self'",
+      // Block embedding of external resources
+      "object-src 'none'",
+      "base-uri 'self'",
     ].join("; ")
   );
   if (process.env.NODE_ENV === "production") {
@@ -128,16 +171,21 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
   return response;
 }
 
+// ─── Allowed Hosts ───────────────────────────────────────────────────────────
+// SECURITY: Use env var for site URL, with fallback
+const ALLOWED_HOSTS = [
+  'localhost:3000',
+  process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL).host : 'fuhaddesmond-eesha-ai.hf.space',
+].filter(Boolean);
+
 // ─── Main Middleware ──────────────────────────────────────────────────────────
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // ── Skip middleware for static files, NextAuth routes, and auth confirm ─
+  // ── Skip middleware for static files ──
   if (
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/auth/confirm") ||
     pathname.startsWith("/favicon") ||
     pathname.includes(".")
   ) {
@@ -145,24 +193,21 @@ export async function middleware(request: NextRequest) {
     return addSecurityHeaders(response);
   }
 
-  // ── CSRF Protection: Validate origin for state-changing requests ────
+  // ── CSRF Protection: Validate origin for ALL state-changing API requests ──
   const method = request.method;
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method) && pathname.startsWith('/api/')) {
     const origin = request.headers.get('origin');
     const host = request.headers.get('host');
 
-    // Allow requests with no origin (same-origin, mobile apps, curl)
-    // But block requests with a mismatched origin
+    // Block requests with a mismatched origin
+    // Allow requests with no origin (same-origin, mobile apps, curl) for compatibility
     if (origin) {
       try {
         const originUrl = new URL(origin);
-        const allowedHosts = [
-          host, // Current host
-          'localhost:3000',
-          'fuhaddesmond-eesha-ai.hf.space',
-        ].filter(Boolean);
+        // Build allowed hosts list dynamically: current host + configured hosts
+        const dynamicAllowedHosts = [host, ...ALLOWED_HOSTS].filter(Boolean);
 
-        if (!allowedHosts.includes(originUrl.host)) {
+        if (!dynamicAllowedHosts.includes(originUrl.host)) {
           return NextResponse.json(
             { error: 'Invalid origin. Possible CSRF attack blocked.' },
             { status: 403 }
@@ -177,10 +222,58 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // ── Always allow the home page and auth routes ────────────────────────
-  // This is the "free chat first" model — anyone can visit the site
-  // Auth is handled via MODAL, not a separate login page
-  if (pathname === "/" || pathname.startsWith("/api/auth") || pathname === "/api/health") {
+  // ── Always allow the home page ──
+  if (pathname === "/") {
+    const response = NextResponse.next();
+    return addSecurityHeaders(response);
+  }
+
+  // ── NextAuth routes: pass through with security headers ──
+  if (pathname.startsWith("/api/auth/[...nextauth]")) {
+    const response = NextResponse.next();
+    return addSecurityHeaders(response);
+  }
+
+  // ── Auth routes (signup, verify-otp, resend-otp, check-status): apply rate limits ──
+  if (pathname.startsWith("/api/auth/")) {
+    const endpointType = getEndpointType(pathname);
+    const ip = request.headers.get("x-forwarded-for") ||
+               request.headers.get("x-real-ip") ||
+               "unknown";
+
+    // Apply rate limiting to auth routes
+    const { allowed, retryAfter } = checkRateLimit(ip, endpointType, true);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429, headers: { "Retry-After": String(retryAfter || 60) } }
+      );
+    }
+
+    // SECURITY: For check-status, return same response regardless of email existence
+    // to prevent email enumeration. The route itself handles this.
+    const response = NextResponse.next();
+    return addSecurityHeaders(response);
+  }
+
+  // ── Health endpoint: allow but minimal ──
+  if (pathname === "/api/health" || pathname === "/api/auth/health") {
+    const response = NextResponse.next();
+    return addSecurityHeaders(response);
+  }
+
+  // ── Debug endpoint: block in production ──
+  if (pathname === "/api/auth/debug-db" && process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  // ── Setup endpoint: block in production ──
+  if (pathname.startsWith("/api/setup/") && process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  // ── Auth confirm route: allow ──
+  if (pathname.startsWith("/auth/confirm")) {
     const response = NextResponse.next();
     return addSecurityHeaders(response);
   }
@@ -195,16 +288,8 @@ export async function middleware(request: NextRequest) {
   const isEmailVerified = isAuthenticated ? !!token.emailVerified : false;
   const userId = isAuthenticated ? (token.id as string) : getAnonymousId(request);
 
-  // ── API Routes: allow anonymous access with stricter limits ─────────────
+  // ── API Routes: apply auth checks and rate limits ──
   if (pathname.startsWith("/api/")) {
-    // Skip auth checks for auth-related routes (signup, verify, resend)
-    if (pathname.startsWith("/api/auth/signup") ||
-        pathname.startsWith("/api/auth/verify-otp") ||
-        pathname.startsWith("/api/auth/resend-otp")) {
-      const response = NextResponse.next();
-      return addSecurityHeaders(response);
-    }
-
     const endpointType = getEndpointType(pathname);
 
     // Terminal: AUTHENTICATED + VERIFIED ONLY — never allow anonymous or unverified
@@ -276,11 +361,13 @@ export async function middleware(request: NextRequest) {
       request: { headers: requestHeaders },
     });
 
-    // For anonymous chat requests, update the free credits cookie
+    // For anonymous chat requests, update the signed free credits cookie
     if (endpointType === "chat" && !isAuthenticated) {
       const creditsUsed = getFreeCreditsUsed(request);
       const newCreditsUsed = creditsUsed + 1;
-      response.cookies.set(FREE_TIER_COOKIE, JSON.stringify({ used: newCreditsUsed }), {
+      const cookieValue = JSON.stringify({ used: newCreditsUsed });
+      const signedValue = signCookieValue(cookieValue);
+      response.cookies.set(FREE_TIER_COOKIE, signedValue, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
@@ -297,24 +384,18 @@ export async function middleware(request: NextRequest) {
   return addSecurityHeaders(response);
 }
 
-// ─── Generate anonymous ID from IP + User-Agent fingerprint ──────────────────
+// ─── Generate anonymous ID from IP + User-Agent ──────────────────────────────
 function getAnonymousId(request: NextRequest): string {
-  // Use a combination of IP and user agent as anonymous identifier
-  // This prevents simple abuse while not requiring login
   const ip = request.headers.get("x-forwarded-for") ||
              request.headers.get("x-real-ip") ||
              "unknown";
   const ua = request.headers.get("user-agent") || "unknown";
 
-  // Simple hash for consistent ID (not cryptographically secure, just for rate limiting)
-  let hash = 0;
-  const str = "anon:" + ip + ":" + ua;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  return "anon_" + Math.abs(hash).toString(36);
+  // Use HMAC for a more secure fingerprint (harder to spoof)
+  const secret = process.env.NEXTAUTH_SECRET || 'fallback-anon-secret';
+  const hmac = createHmac('sha256', secret);
+  hmac.update("anon:" + ip + ":" + ua);
+  return "anon_" + hmac.digest('hex').slice(0, 16);
 }
 
 export const config = {

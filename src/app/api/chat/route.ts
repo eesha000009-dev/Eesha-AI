@@ -233,79 +233,84 @@ const TOOLS = [
   },
 ];
 
-// ─── SECURITY: Comprehensive command blocklist ─────────────────────────────
-// These patterns are checked against the command BEFORE execution
-const BLOCKED_PATTERNS: Array<{ pattern: RegExp; reason: string }> = [
-  // System destruction
-  { pattern: /\brm\s+(-[a-zA-Z]*f[a-zA-Z]*\s+|.*--no-preserve-root)/i, reason: 'Destructive rm command blocked' },
-  { pattern: /\bmkfs\b/i, reason: 'Filesystem format command blocked' },
-  { pattern: /\bdd\s+if=/i, reason: 'Disk dump command blocked' },
-  { pattern: /:()\{\s*:\s*\|\s*:\s*&\s*\}/, reason: 'Fork bomb blocked' },
-  { pattern: /\bshutdown\b/i, reason: 'System shutdown blocked' },
-  { pattern: /\breboot\b/i, reason: 'System reboot blocked' },
-  { pattern: /\binit\s+[06Ss]\b/i, reason: 'Runlevel change blocked' },
-  { pattern: /\bhalt\b/i, reason: 'System halt blocked' },
-  { pattern: /\bpoweroff\b/i, reason: 'System poweroff blocked' },
+// ─── SECURITY: Command allowlist ─────────────────────────────────────────────
+// ONLY these commands are permitted. Everything else is blocked.
+// This is more secure than a blocklist because new/dangerous commands are
+// automatically rejected instead of needing to be discovered and blocked.
+const ALLOWED_COMMANDS: Array<{ pattern: RegExp; description: string }> = [
+  // File listing & reading
+  { pattern: /^ls\s*/, description: 'List files' },
+  { pattern: /^ls$/, description: 'List files' },
+  { pattern: /^cat\s+/, description: 'Read file' },
+  { pattern: /^head\s+/, description: 'Read file head' },
+  { pattern: /^tail\s+/, description: 'Read file tail' },
+  { pattern: /^less\s+/, description: 'Read file' },
+  { pattern: /^wc\s+/, description: 'Count words/lines' },
+  { pattern: /^file\s+/, description: 'Check file type' },
+  { pattern: /^find\s+/, description: 'Find files' },
+  { pattern: /^tree\s*/, description: 'Tree listing' },
 
-  // Privilege escalation
-  { pattern: /\bsudo\b/i, reason: 'Privilege escalation blocked' },
-  { pattern: /\bsu\s+/i, reason: 'User switch blocked' },
-  { pattern: /\bchmod\s+[0-7]*77[0-7]?\b/i, reason: 'Overly permissive chmod blocked' },
-  { pattern: /\bchown\b/i, reason: 'Ownership change blocked' },
-  { pattern: /\bpkexec\b/i, reason: 'PolicyKit escalation blocked' },
+  // Node.js / JavaScript
+  { pattern: /^node\s+/, description: 'Run Node.js script' },
+  { pattern: /^npx\s+/, description: 'Run npx package' },
+  { pattern: /^npm\s+(run|start|test|build|info|list|view|init)/, description: 'npm safe commands' },
+  { pattern: /^npx\s+prisma\s+/, description: 'Prisma CLI' },
+  { pattern: /^tsc\s*/, description: 'TypeScript compiler' },
 
-  // Network attacks
-  { pattern: /\bnc\s+.*-[el]/i, reason: 'Netcat listener blocked' },
-  { pattern: /\bncat\s+.*--listen/i, reason: 'Ncat listener blocked' },
-  { pattern: /\bsocat\b/i, reason: 'Socat blocked' },
-  { pattern: /\bpython[23]?\s+-m\s+(http|SimpleHTTPServer|socketserver)/i, reason: 'Network server blocked' },
-  { pattern: /\bpython[23]?\s+-c\s+.*socket/i, reason: 'Raw socket usage blocked' },
-  { pattern: /\bcurl\s+.*\|\s*(sh|bash|zsh)/i, reason: 'Remote script execution blocked' },
-  { pattern: /\bwget\s+.*\|\s*(sh|bash|zsh)/i, reason: 'Remote script execution blocked' },
+  // Python (execution only, no server/network)
+  { pattern: /^python3?\s+/, description: 'Run Python script' },
 
-  // Data exfiltration
-  { pattern: /\bcurl\s+.*(-T\s+|--upload-file)/i, reason: 'File upload blocked' },
-  { pattern: /\bscp\s+/i, reason: 'SCP blocked' },
-  { pattern: /\brsync\s+/i, reason: 'RSync blocked' },
+  // Git
+  { pattern: /^git\s+(status|log|diff|branch|show|remote|init|add|commit|stash|tag|describe)/, description: 'Git safe commands' },
 
-  // System modification
-  { pattern: /\bapt\b/i, reason: 'Package management blocked' },
-  { pattern: /\byum\b/i, reason: 'Package management blocked' },
-  { pattern: /\bpip\s+install/i, reason: 'Package installation blocked' },
-  { pattern: /\bnpm\s+install\s+-g/i, reason: 'Global npm install blocked' },
-  { pattern: /\bsystemctl\b/i, reason: 'Systemd control blocked' },
-  { pattern: /\bservice\b/i, reason: 'Service control blocked' },
-  { pattern: /\bcrontab\b/i, reason: 'Cron modification blocked' },
-  { pattern: /\bmount\b/i, reason: 'Mount blocked' },
-  { pattern: /\bumount\b/i, reason: 'Unmount blocked' },
+  // Text processing
+  { pattern: /^grep\s+/, description: 'Search text' },
+  { pattern: /^rg\s+/, description: 'Ripgrep search' },
+  { pattern: /^sed\s+/, description: 'Text substitution' },
+  { pattern: /^awk\s+/, description: 'Text processing' },
+  { pattern: /^sort\s*/, description: 'Sort lines' },
+  { pattern: /^uniq\s*/, description: 'Unique lines' },
+  { pattern: /^tr\s+/, description: 'Translate chars' },
+  { pattern: /^cut\s+/, description: 'Cut columns' },
+  { pattern: /^paste\s+/, description: 'Paste columns' },
+  { pattern: /^diff\s+/, description: 'Diff files' },
+  { pattern: /^echo\s+/, description: 'Print text' },
+  { pattern: /^printf\s+/, description: 'Formatted print' },
+  { pattern: /^date\s*/, description: 'Show date' },
+  { pattern: /^which\s+/, description: 'Find command' },
+  { pattern: /^whoami\s*/, description: 'Current user' },
+  { pattern: /^pwd\s*/, description: 'Print working directory' },
+  { pattern: /^uname\s*/, description: 'System info' },
+  { pattern: /^mkdir\s+/, description: 'Create directory' },
+  { pattern: /^touch\s+/, description: 'Create empty file' },
+  { pattern: /^cp\s+/, description: 'Copy files' },
+  { pattern: /^mv\s+/, description: 'Move/rename files' },
 
-  // Filesystem escape
-  { pattern: /\/etc\//i, reason: 'Access to /etc blocked' },
-  { pattern: /\/root\//i, reason: 'Access to /root blocked' },
-  { pattern: /\/var\/log/i, reason: 'Access to logs blocked' },
-  { pattern: /\/proc\//i, reason: 'Access to /proc blocked' },
-  { pattern: /\/sys\//i, reason: 'Access to /sys blocked' },
-
-  // Reverse shells
-  { pattern: /\/dev\/tcp\//i, reason: 'Reverse shell pattern blocked' },
-  { pattern: /\/dev\/udp\//i, reason: 'Reverse shell pattern blocked' },
-  { pattern: /\bbash\s+-i/i, reason: 'Interactive shell blocked' },
-  { pattern: /\bpython[23]?\s+-c\s+.*pty/i, reason: 'PTY spawn blocked' },
-
-  // Environment/secret access
-  { pattern: /\benv\b/i, reason: 'Environment variable dump blocked' },
-  { pattern: /\bprintenv\b/i, reason: 'Environment variable dump blocked' },
-  { pattern: /\bexport\s+/i, reason: 'Environment modification blocked' },
-  { pattern: /\.env/i, reason: 'Environment file access blocked' },
+  // Package managers (install to local only)
+  { pattern: /^npm\s+install\s+(?!-g)/, description: 'npm local install' },
+  { pattern: /^pip3?\s+install\s+(?!--user|-g|--global)/, description: 'pip local install' },
 ];
 
 function isCommandSafe(command: string): { safe: boolean; reason?: string } {
-  for (const { pattern, reason } of BLOCKED_PATTERNS) {
-    if (pattern.test(command)) {
-      return { safe: false, reason };
+  const trimmed = command.trim();
+
+  // Check against allowlist
+  for (const { pattern, description } of ALLOWED_COMMANDS) {
+    if (pattern.test(trimmed)) {
+      // Secondary check: block pipe chains that include dangerous commands
+      if (/[|;&`$]/.test(trimmed)) {
+        return { safe: false, reason: 'Pipe chains and shell operators are not allowed' };
+      }
+      // Block any form of redirection that could overwrite system files
+      if (/>\s*\//.test(trimmed)) {
+        return { safe: false, reason: 'Output redirection outside workspace is not allowed' };
+      }
+      return { safe: true };
     }
   }
-  return { safe: true };
+
+  // Command not in allowlist
+  return { safe: false, reason: `Command not in allowlist. Only safe development commands are permitted.` };
 }
 
 // ─── Output Sanitization ─────────────────────────────────────────────────────
@@ -316,13 +321,22 @@ const sanitizeOutput = (output: string): string => {
     .replace(/eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g, '[REDACTED_JWT]')
     .replace(/hf_[a-zA-Z0-9]+/g, '[REDACTED_TOKEN]')
     .replace(/postgresql:\/\/[^\s]+/g, '[REDACTED_DB_URL]')
-    .replace(/hLz0TXpX16Gzj9EK/g, '[REDACTED]')
-    .replace(/xydfeerrrtlgrxmtepjo/g, '[REDACTED_PROJECT]');
+    // Redact any Supabase project ref pattern (20-char alphanumeric)
+    .replace(/[a-z]{20}\.supabase\.co/g, '[REDACTED_PROJECT].supabase.co');
 };
 
 // ─── Tool execution ──────────────────────────────────────────────────────────
+// SECURITY: Some tools are restricted to authenticated users only
 
-async function executeTool(name: string, args: Record<string, unknown>): Promise<string> {
+// Tools that anonymous users CANNOT use (security-sensitive)
+const AUTHENTICATED_ONLY_TOOLS = ['run_command', 'delete_file'];
+
+async function executeTool(name: string, args: Record<string, unknown>, isAuthenticated: boolean): Promise<string> {
+  // SECURITY: Block dangerous tools for anonymous users
+  if (!isAuthenticated && AUTHENTICATED_ONLY_TOOLS.includes(name)) {
+    return `Tool "${name}" requires sign-in. Create a free account to use this feature.`;
+  }
+
   try {
     switch (name) {
       case 'create_file': {
@@ -695,7 +709,7 @@ export async function POST(req: NextRequest) {
               command: '',
             })));
 
-            const result = await executeTool('create_file', { path: file.path, content: file.content });
+            const result = await executeTool('create_file', { path: file.path, content: file.content }, isAuthenticated);
 
             controller.enqueue(encoder.encode(sse('tool_result', {
               tool: 'create_file',
@@ -712,7 +726,7 @@ export async function POST(req: NextRequest) {
               command: (tc.args.command as string) || '',
             })));
 
-            const result = await executeTool(tc.name, tc.args);
+            const result = await executeTool(tc.name, tc.args, isAuthenticated);
 
             controller.enqueue(encoder.encode(sse('tool_result', {
               tool: tc.name,

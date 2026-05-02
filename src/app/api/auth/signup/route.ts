@@ -180,20 +180,19 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    // SECURITY: Log full error server-side only. Return generic message to client.
     const errMsg = error instanceof Error ? error.message : String(error);
-    const errStack = error instanceof Error ? error.stack : '';
     console.error('[SIGNUP] UNEXPECTED ERROR:', errMsg);
-    console.error('[SIGNUP] Error stack:', errStack);
+    if (error instanceof Error && error.stack) {
+      console.error('[SIGNUP] Stack:', error.stack);
+    }
 
     if (error instanceof Error) {
-      if (error.message.includes('UNIQUE_CONSTRAINT') || error.message.includes('Unique constraint') || error.message.includes('unique') || error.message.includes('duplicate')) {
+      if (errMsg.includes('UNIQUE_CONSTRAINT') || errMsg.includes('Unique constraint') || errMsg.includes('unique') || errMsg.includes('duplicate') || errMsg.includes('already exists')) {
         return NextResponse.json({ error: 'An account with this email already exists. Please log in instead.' }, { status: 409 });
       }
-      return NextResponse.json({
-        error: `Signup error: ${errMsg}`,
-        details: errStack?.split('\n').slice(0, 3).join(' | '),
-      }, { status: 500 });
     }
-    return NextResponse.json({ error: `Signup error: ${errMsg}` }, { status: 500 });
+    // Never expose internal error details to the client
+    return NextResponse.json({ error: 'An unexpected error occurred. Please try again.' }, { status: 500 });
   }
 }

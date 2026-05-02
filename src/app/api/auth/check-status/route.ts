@@ -3,7 +3,8 @@ import { dbRest } from '@/lib/db-rest';
 
 // ─── POST /api/auth/check-status ────────────────────────────────────────────
 // Checks whether an email is registered in our `users` table.
-// Uses Supabase REST API (HTTPS) for database operations.
+// SECURITY: Returns a generic response to prevent email enumeration.
+// The actual verification status is only revealed after proper auth flow.
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,20 +19,12 @@ export async function POST(request: NextRequest) {
 
     const user = await dbRest.findUserByEmail(normalizedEmail);
 
-    if (!user) {
-      return NextResponse.json({
-        exists: false,
-        status: 'not_found',
-        message: 'No account found with this email.',
-      });
-    }
-
+    // SECURITY: Always return same generic response to prevent email enumeration.
+    // The login page will show appropriate errors based on the actual auth attempt.
     return NextResponse.json({
       exists: true,
-      status: user.emailVerified ? 'verified' : 'found',
-      message: user.emailVerified
-        ? 'Your email is verified. You can sign in now.'
-        : 'Account found. Please verify your email.',
+      status: 'check_email',
+      message: 'If an account exists with this email, check your inbox for next steps.',
     });
 
   } catch (error) {
