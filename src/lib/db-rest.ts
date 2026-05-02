@@ -12,6 +12,7 @@
  */
 
 import { createServerSupabaseClient } from '@/lib/supabase-server';
+import { nanoid } from 'nanoid';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -82,9 +83,12 @@ export const dbRest = {
     emailVerified?: Date | null;
   }): Promise<UserRecord> {
     const supabase = getAdminClient();
+    // Generate a unique ID (CUID-style) since the DB column doesn't auto-generate
+    const id = `cl${nanoid(22)}`;
     const { data: user, error } = await supabase
       .from('users')
       .insert({
+        id,
         email: data.email,
         name: data.name,
         passwordHash: data.passwordHash,
