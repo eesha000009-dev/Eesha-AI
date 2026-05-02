@@ -78,11 +78,15 @@ export async function POST(request: NextRequest) {
     // This generates a token of type 'email' and OVERRIDES any existing
     // 'signup' type token from signUp(). The user must use the NEW code.
     const signupClient = createSignupClient();
+    const siteUrl = process.env.NEXTAUTH_URL || 'https://fuhaddesmond-eesha-ai.hf.space';
 
     // Attempt 1: with shouldCreateUser: false (user already exists)
     const { error: otpError1 } = await signupClient.auth.signInWithOtp({
       email: emailKey,
-      options: { shouldCreateUser: false },
+      options: {
+        shouldCreateUser: false,
+        emailRedirectTo: `${siteUrl}/auth/confirm`,
+      },
     });
 
     if (!otpError1) {
@@ -100,6 +104,9 @@ export async function POST(request: NextRequest) {
     // Attempt 2: without flag (more permissive)
     const { error: otpError2 } = await signupClient.auth.signInWithOtp({
       email: emailKey,
+      options: {
+        emailRedirectTo: `${siteUrl}/auth/confirm`,
+      },
     });
 
     if (!otpError2) {

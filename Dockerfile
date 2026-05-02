@@ -53,7 +53,8 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 # Copy pg module for DB migration and email template updates
 COPY --from=builder /app/node_modules/pg ./node_modules/pg
-COPY --from=builder /app/node_modules/pg-connection-string ./node_modules/pg-connection-string 2>/dev/null || true
+# pg-connection-string is a dependency of pg — needed for connection string parsing
+COPY --from=builder /app/node_modules/pg-connection-string ./node_modules/pg-connection-string
 # Copy prisma CLI for runtime schema sync (prisma db push)
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 # Copy email template update script
@@ -65,6 +66,8 @@ COPY --from=builder /app/scripts ./scripts
 #   NEXTAUTH_SECRET, NEXTAUTH_URL — NextAuth.js configuration
 #   SUPABASE_URL, SUPABASE_SERVICE_KEY — Supabase Auth admin (server-side only)
 #   SUPABASE_ANON_KEY — Supabase Auth public key (server-side only, NOT NEXT_PUBLIC_)
+#   SUPABASE_ACCESS_TOKEN — (optional) For email template updates via Management API
+#   SUPABASE_DB_PASSWORD — (optional) For direct DB email template updates
 #   GITHUB_ID, GITHUB_SECRET — GitHub OAuth
 #   AGENT1_API_KEY, AGENT2_API_KEY, AGENT3_API_KEY — NVIDIA API keys
 ENV WORKSPACE_ROOT=/app/workspace

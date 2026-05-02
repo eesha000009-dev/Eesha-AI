@@ -260,10 +260,16 @@ export async function POST(request: NextRequest) {
     //     because signInWithOtp() already replaced it
     console.log('[SIGNUP] Attempting signUp for:', normalizedEmail);
 
+    // Base URL for email redirects — if the email template uses {{ .ConfirmationURL }},
+    // clicking the link will redirect here after Supabase verifies the token
+    const siteUrl = process.env.NEXTAUTH_URL || 'https://fuhaddesmond-eesha-ai.hf.space';
+    const emailRedirectTo = `${siteUrl}/auth/confirm`;
+
     const { data: signUpData, error: signUpError } = await signupClient.auth.signUp({
       email: normalizedEmail,
       password,
       options: {
+        emailRedirectTo,
         data: {
           username: username || undefined,
           agreed_to_policy: true,
@@ -290,10 +296,12 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        const siteUrl = process.env.NEXTAUTH_URL || 'https://fuhaddesmond-eesha-ai.hf.space';
         const { data: retryData, error: retryError } = await signupClient.auth.signUp({
           email: normalizedEmail,
           password,
           options: {
+            emailRedirectTo: `${siteUrl}/auth/confirm`,
             data: {
               username: username || undefined,
               agreed_to_policy: true,
@@ -464,13 +472,17 @@ async function adminFallbackSignup(
     console.log('[SIGNUP] Admin fallback: sending OTP via signInWithOtp for:', email);
     await new Promise(resolve => setTimeout(resolve, 500));
 
+    const siteUrl = process.env.NEXTAUTH_URL || 'https://fuhaddesmond-eesha-ai.hf.space';
     let otpSent = false;
 
     // Attempt 1: with shouldCreateUser: false
     try {
       const { error } = await signupClient.auth.signInWithOtp({
         email,
-        options: { shouldCreateUser: false },
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: `${siteUrl}/auth/confirm`,
+        },
       });
       if (!error) {
         otpSent = true;
@@ -485,7 +497,12 @@ async function adminFallbackSignup(
     // Attempt 2: without flag
     if (!otpSent) {
       try {
-        const { error } = await signupClient.auth.signInWithOtp({ email });
+        const { error } = await signupClient.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${siteUrl}/auth/confirm`,
+          },
+        });
         if (!error) {
           otpSent = true;
           console.log('[SIGNUP] Admin fallback: OTP sent (no flag)');
