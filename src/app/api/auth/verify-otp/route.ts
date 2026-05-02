@@ -1,28 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSignupClient } from '@/lib/supabase-server';
 import { dbRest } from '@/lib/db-rest';
+import { rateLimiter } from '@/lib/rate-limiter';
 
 // ─── Rate limiting for OTP verification attempts ──────────────────────────────
-const otpAttempts = new Map<string, { count: number; resetTime: number }>();
+// Uses the shared RateLimiter abstraction (see @/lib/rate-limiter).
+// In-memory for single-instance; set REDIS_URL for multi-instance.
 const MAX_OTP_ATTEMPTS = 10;
 const OTP_WINDOW_MS = 15 * 60_000;
-
-function checkOtpRateLimit(identifier: string): { allowed: boolean; retryAfter?: number } {
-  const now = Date.now();
-  const entry = otpAttempts.get(identifier);
-
-  if (!entry || now > entry.resetTime) {
-    otpAttempts.set(identifier, { count: 1, resetTime: now + OTP_WINDOW_MS });
-    return { allowed: true };
-  }
-
-  if (entry.count >= MAX_OTP_ATTEMPTS) {
-    return { allowed: false, retryAfter: Math.ceil((entry.resetTime - now) / 1000) };
-  }
-
-  entry.count++;
-  return { allowed: true };
-}
 
 // ─── POST /api/auth/verify-otp ────────────────────────────────────────────────
 //
@@ -49,7 +34,10 @@ export async function POST(request: NextRequest) {
 
     // ── Rate limiting ───────────────────────────────────────────────────────
     const normalizedEmail = email.toLowerCase().trim();
-    const rateCheck = checkOtpRateLimit(normalizedEmail);
+    const rateCheck = await rateLimiter.check(`otp:${normalizedEmail}`, {
+      windowMs: OTP_WINDOW_MS,
+      maxRequests: MAX_OTP_ATTEMPTS,
+    });
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: 'Too many verification attempts. Please request a new code.' },

@@ -51,6 +51,11 @@ export function useChat() {
         }
       }
 
+      if (!conversationId) {
+        setError('Failed to create conversation');
+        return;
+      }
+
       const userMessage = {
         id: `user-${Date.now()}`,
         role: 'user' as const,

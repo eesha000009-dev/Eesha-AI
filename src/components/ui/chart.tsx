@@ -78,6 +78,11 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null
   }
 
+  // SECURITY NOTE: dangerouslySetInnerHTML is used here to inject CSS custom
+  // properties for chart theming. The content is derived entirely from the
+  // ChartConfig prop (internal theme config + CSS color values). No user input
+  // flows into this HTML. If ChartConfig is ever populated from external data,
+  // sanitize the color values before rendering.
   return (
     <style
       dangerouslySetInnerHTML={{

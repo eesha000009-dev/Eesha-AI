@@ -2,25 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { dbRest } from '@/lib/db-rest';
 import { createSignupClient } from '@/lib/supabase-server';
+import { rateLimiter } from '@/lib/rate-limiter';
 
 // ─── Rate limiting for sign-up attempts ──────────────────────────────────────
-const signupAttempts = new Map<string, { count: number; resetTime: number }>();
+// Uses the shared RateLimiter abstraction (see @/lib/rate-limiter).
+// In-memory for single-instance; set REDIS_URL for multi-instance.
 const MAX_SIGNUP_ATTEMPTS = 5;
 const SIGNUP_WINDOW_MS = 15 * 60_000;
-
-function checkSignupRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
-  const now = Date.now();
-  const entry = signupAttempts.get(ip);
-  if (!entry || now > entry.resetTime) {
-    signupAttempts.set(ip, { count: 1, resetTime: now + SIGNUP_WINDOW_MS });
-    return { allowed: true };
-  }
-  if (entry.count >= MAX_SIGNUP_ATTEMPTS) {
-    return { allowed: false, retryAfter: Math.ceil((entry.resetTime - now) / 1000) };
-  }
-  entry.count++;
-  return { allowed: true };
-}
 
 // ─── POST /api/auth/signup ────────────────────────────────────────────────────
 //
@@ -76,7 +64,10 @@ export async function POST(request: NextRequest) {
 
     // ── Rate limiting ───────────────────────────────────────────────────────
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-    const rateCheck = checkSignupRateLimit(ip);
+    const rateCheck = await rateLimiter.check(`signup:${ip}`, {
+      windowMs: SIGNUP_WINDOW_MS,
+      maxRequests: MAX_SIGNUP_ATTEMPTS,
+    });
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: 'Too many sign-up attempts. Please try again later.' },

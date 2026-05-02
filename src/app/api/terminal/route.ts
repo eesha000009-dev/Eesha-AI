@@ -66,7 +66,7 @@ function isCommandSafe(command: string): { safe: boolean; reason?: string } {
 }
 
 // POST — execute a command in the workspace
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
   // ━━━ SECURITY: Authenticate user ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const userId = await getAuthUserId();
   if (!userId) {
@@ -114,12 +114,13 @@ export async function POST(req: NextRequest) {
     }
 
     // ━━━ SECURITY: Execute with restricted environment ━━━━━━━━━━━━━━━━━━
-    const safeEnv: Record<string, string> = {
+    const safeEnv: NodeJS.ProcessEnv = {
       PATH: process.env.PATH || '/usr/bin:/bin',
       HOME: WORKSPACE_ROOT,
       TERM: 'dumb',
       LANG: 'en_US.UTF-8',
       USER: 'workspace',
+      NODE_ENV: process.env.NODE_ENV || 'production',
     };
     // Do NOT pass API keys, database URLs, or other secrets to child processes
 

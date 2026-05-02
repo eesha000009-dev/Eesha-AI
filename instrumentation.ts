@@ -56,6 +56,9 @@ async function updateEmailTemplates(): Promise<void> {
   // Instead, try using the Supabase Auth Admin API to check the current config.
 
   // Attempt 2: Use a direct database connection via pg module
+  // SECURITY: We use ssl:'require' which validates the server certificate.
+  // DO NOT use rejectUnauthorized:false or NODE_TLS_REJECT_UNAUTHORIZED='0'
+  // as those disable TLS verification globally for ALL connections in the process.
   try {
     const pg = await import('pg');
     const dbPassword = process.env.SUPABASE_DB_PASSWORD;
@@ -64,11 +67,11 @@ async function updateEmailTemplates(): Promise<void> {
     const projectRef = SUPABASE_URL.replace('https://', '').replace('.supabase.co', '');
 
     const connectionStrings = [
-      // Transaction pooler (port 6543)
+      // Transaction pooler (port 6543) — recommended for serverless
       dbPassword ? `postgresql://postgres.${projectRef}:${dbPassword}@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require` : null,
       // Session pooler (port 5432)
       dbPassword ? `postgresql://postgres.${projectRef}:${dbPassword}@aws-0-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require` : null,
-      // Direct connection
+      // Direct connection — may not work on IPv4-only hosts (e.g., HF Spaces)
       dbPassword ? `postgresql://postgres:${dbPassword}@db.${projectRef}.supabase.co:5432/postgres?sslmode=require` : null,
       // DATABASE_URL from Prisma
       process.env.DIRECT_URL,
@@ -76,11 +79,12 @@ async function updateEmailTemplates(): Promise<void> {
 
     for (const connectionString of connectionStrings) {
       try {
-        process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-
+        // SECURITY: Use ssl:'require' to validate the server certificate.
+        // This rejects self-signed or invalid certificates.
+        // The pooler connections use proper CA-signed certs, so this works.
         const pool = new pg.Pool({
           connectionString,
-          ssl: { rejectUnauthorized: false },
+          ssl: 'require',
           connectionTimeoutMillis: 10000,
         });
 
@@ -118,8 +122,6 @@ async function updateEmailTemplates(): Promise<void> {
         }
       } catch (e: any) {
         console.warn('[STARTUP] DB connection failed:', e.message);
-      } finally {
-        process.env.NODE_TLS_REJECT_UNAUTHORIZED = '1';
       }
     }
   } catch (e: any) {

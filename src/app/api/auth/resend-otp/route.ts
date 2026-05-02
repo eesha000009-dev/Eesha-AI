@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSignupClient } from '@/lib/supabase-server';
 import { dbRest } from '@/lib/db-rest';
+import { rateLimiter } from '@/lib/rate-limiter';
 
 // ─── Rate limiting for resend attempts ────────────────────────────────────────
-const resendAttempts = new Map<string, { count: number; resetTime: number }>();
+// Uses the shared RateLimiter abstraction (see @/lib/rate-limiter).
+// In-memory for single-instance; set REDIS_URL for multi-instance.
 const MAX_RESEND_ATTEMPTS = 5;
 const RESEND_WINDOW_MS = 15 * 60_000;
 const RESEND_COOLDOWN_MS = 60_000;
@@ -38,16 +40,15 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Rate limit check ────────────────────────────────────────────────────
-    const entry = resendAttempts.get(emailKey);
-    if (!entry || now > entry.resetTime) {
-      resendAttempts.set(emailKey, { count: 1, resetTime: now + RESEND_WINDOW_MS });
-    } else if (entry.count >= MAX_RESEND_ATTEMPTS) {
+    const rateCheck = await rateLimiter.check(`resend:${emailKey}`, {
+      windowMs: RESEND_WINDOW_MS,
+      maxRequests: MAX_RESEND_ATTEMPTS,
+    });
+    if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: 'Too many resend attempts. Please try again later.' },
         { status: 429 }
       );
-    } else {
-      entry.count++;
     }
 
     // ── Check our `users` table first ──────────────────────────────────────

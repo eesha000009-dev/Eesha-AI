@@ -48,11 +48,12 @@ async function tryPgConnection(connectionString: string): Promise<{ connected: b
     return { connected: false, results: [], error: 'pg module not available' };
   }
 
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-
+  // SECURITY: Use ssl:'require' to validate the server certificate.
+  // DO NOT use rejectUnauthorized:false or NODE_TLS_REJECT_UNAUTHORIZED='0'
+  // as those disable TLS verification globally for ALL connections in the process.
   const pool = new pg.Pool({
     connectionString,
-    ssl: { rejectUnauthorized: false },
+    ssl: 'require',
     connectionTimeoutMillis: 10000,
   });
 
@@ -80,7 +81,6 @@ async function tryPgConnection(connectionString: string): Promise<{ connected: b
     return { connected: false, results, error: e.message };
   } finally {
     await pool.end();
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '1';
   }
 }
 

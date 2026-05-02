@@ -18,7 +18,7 @@ export function createServerSupabaseClient(): SupabaseClient {
   const key = process.env.SUPABASE_SERVICE_KEY;
 
   if (!url || !key) {
-    const missing = [];
+    const missing: string[] = [];
     if (!url) missing.push('SUPABASE_URL');
     if (!key) missing.push('SUPABASE_SERVICE_KEY');
     throw new Error(`Missing required environment variables: ${missing.join(', ')}. Set these in your HF Space Secrets.`);
@@ -49,7 +49,7 @@ export function createSignupClient(): SupabaseClient {
   const anonKey = process.env.SUPABASE_ANON_KEY;
 
   if (!url || !anonKey) {
-    const missing = [];
+    const missing: string[] = [];
     if (!url) missing.push('SUPABASE_URL');
     if (!anonKey) missing.push('SUPABASE_ANON_KEY');
     throw new Error(`Missing required environment variables: ${missing.join(', ')}. Set these in your HF Space Secrets.`);

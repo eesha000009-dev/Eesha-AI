@@ -34,7 +34,8 @@ function runCommand(command: string, cwd?: string): Promise<{ stdout: string; st
         TERM: 'dumb',
         LANG: 'en_US.UTF-8',
         USER: 'workspace',
-      },
+        NODE_ENV: process.env.NODE_ENV || 'production',
+      } as NodeJS.ProcessEnv,
     }, (error, stdout, stderr) => {
       resolve({
         stdout: stdout || '',

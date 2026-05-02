@@ -2,16 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { createHmac } from "crypto";
+import { rateLimiter } from "@/lib/rate-limiter";
 
 // ─── Rate Limiting Configuration ─────────────────────────────────────────────
-
-interface RateLimitEntry {
-  count: number;
-  resetTime: number;
-}
-
-const rateLimitMap = new Map<string, RateLimitEntry>();
-const RATE_LIMIT_MAX_ENTRIES = 10000; // Prevent unbounded memory growth
+// Uses the RateLimiter abstraction from @/lib/rate-limiter.
+// Currently in-memory (single-instance). Set REDIS_URL to enable Redis store
+// when deploying multiple instances (see src/lib/rate-limiter.ts).
 
 // Rate limit configurations per endpoint type
 // Anonymous users get LOWER limits; authenticated users get FULL limits
@@ -50,7 +46,7 @@ function getEndpointType(pathname: string): string {
   return "default";
 }
 
-function checkRateLimit(identifier: string, endpointType: string, isAnonymous: boolean): { allowed: boolean; retryAfter?: number } {
+async function checkRateLimit(identifier: string, endpointType: string, isAnonymous: boolean): Promise<{ allowed: boolean; retryAfter?: number }> {
   const config = RATE_LIMITS[endpointType] || RATE_LIMITS.default;
   const maxRequests = isAnonymous ? config.anonMaxRequests : config.maxRequests;
 
@@ -60,27 +56,15 @@ function checkRateLimit(identifier: string, endpointType: string, isAnonymous: b
   }
 
   const key = identifier + ":" + endpointType;
-  const now = Date.now();
+  const result = await rateLimiter.check(key, {
+    windowMs: config.windowMs,
+    maxRequests,
+  });
 
-  const entry = rateLimitMap.get(key);
-
-  if (!entry || now > entry.resetTime) {
-    // Prevent memory leak: evict oldest entries if map is too large
-    if (rateLimitMap.size >= RATE_LIMIT_MAX_ENTRIES) {
-      const oldestKey = rateLimitMap.keys().next().value;
-      if (oldestKey) rateLimitMap.delete(oldestKey);
-    }
-    rateLimitMap.set(key, { count: 1, resetTime: now + config.windowMs });
-    return { allowed: true };
-  }
-
-  if (entry.count >= maxRequests) {
-    const retryAfter = Math.ceil((entry.resetTime - now) / 1000);
-    return { allowed: false, retryAfter };
-  }
-
-  entry.count++;
-  return { allowed: true };
+  return {
+    allowed: result.allowed,
+    retryAfter: result.retryAfter,
+  };
 }
 
 // ─── Signed Free Tier Cookie ─────────────────────────────────────────────────
@@ -118,18 +102,6 @@ function getFreeCreditsUsed(request: NextRequest): number {
   } catch {
     return FREE_TIER_MAX; // Invalid cookie = treat as used up
   }
-}
-
-// Clean up old rate limit entries every 5 minutes
-if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, entry] of rateLimitMap.entries()) {
-      if (now > entry.resetTime + 300_000) {
-        rateLimitMap.delete(key);
-      }
-    }
-  }, 300_000);
 }
 
 // ─── Security Headers ────────────────────────────────────────────────────────
@@ -242,7 +214,7 @@ export async function middleware(request: NextRequest) {
                "unknown";
 
     // Apply rate limiting to auth routes
-    const { allowed, retryAfter } = checkRateLimit(ip, endpointType, true);
+    const { allowed, retryAfter } = await checkRateLimit(ip, endpointType, true);
     if (!allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
@@ -333,7 +305,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Rate limiting
-    const { allowed, retryAfter } = checkRateLimit(userId, endpointType, !isAuthenticated);
+    const { allowed, retryAfter } = await checkRateLimit(userId, endpointType, !isAuthenticated);
     if (!allowed) {
       return NextResponse.json(
         { error: "Rate limit exceeded. Please slow down." + (!isAuthenticated ? " Sign in for higher limits." : "") },

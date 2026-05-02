@@ -48,10 +48,12 @@ async function tryDirectDb() {
 
   for (const connStr of connectionStrings) {
     if (!connStr) continue;
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    // SECURITY: Use ssl:'require' to validate the server certificate.
+    // DO NOT use rejectUnauthorized:false or NODE_TLS_REJECT_UNAUTHORIZED='0'
+    // as those disable TLS verification globally for ALL connections in the process.
     const pool = new pg.Pool({
       connectionString: connStr,
-      ssl: { rejectUnauthorized: false },
+      ssl: 'require',
       connectionTimeoutMillis: 10000,
     });
 
@@ -88,8 +90,6 @@ async function tryDirectDb() {
     } catch (e) {
       console.warn(`[EMAIL-TEMPLATES] DB connection failed: ${e.message}`);
       try { await pool.end(); } catch {}
-    } finally {
-      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '1';
     }
   }
 
