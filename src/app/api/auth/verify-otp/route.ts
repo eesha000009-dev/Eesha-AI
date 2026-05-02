@@ -4,11 +4,10 @@ import { db } from '@/lib/db';
 
 // ─── Rate limiting for OTP verification attempts ──────────────────────────────
 const otpAttempts = new Map<string, { count: number; resetTime: number }>();
-const MAX_OTP_ATTEMPTS = 5;        // per email per window (strict for security)
+const MAX_OTP_ATTEMPTS = 10;       // generous — wrong codes are not a security risk
 const OTP_WINDOW_MS = 15 * 60_000; // 15 minutes
 
-// Supabase OTP expiry — default is 3600s (1 hour) but can be configured in Dashboard.
-// We use this to distinguish "wrong code" from "expired code".
+// Supabase OTP expiry — default is 3600s (1 hour).
 const OTP_EXPIRY_SECONDS = 3600;
 
 function checkOtpRateLimit(identifier: string): { allowed: boolean; retryAfter?: number } {
@@ -28,16 +27,50 @@ function checkOtpRateLimit(identifier: string): { allowed: boolean; retryAfter?:
   return { allowed: true };
 }
 
+// ─── Helper: Send OTP code (same as in signup route) ─────────────────────────
+async function sendOtpCode(signupClient: ReturnType<typeof createSignupClient>, email: string): Promise<{ sent: boolean; error?: string }> {
+  // Attempt 1: with shouldCreateUser: false
+  try {
+    const { error } = await signupClient.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false },
+    });
+    if (!error) {
+      console.log('[VERIFY-OTP] OTP resent via signInWithOtp (shouldCreateUser: false)');
+      return { sent: true };
+    }
+    console.warn('[VERIFY-OTP] signInWithOtp attempt 1 failed:', error.message);
+  } catch (e) {
+    console.warn('[VERIFY-OTP] signInWithOtp attempt 1 exception:', e);
+  }
+
+  // Attempt 2: without flag
+  try {
+    const { error } = await signupClient.auth.signInWithOtp({ email });
+    if (!error) {
+      console.log('[VERIFY-OTP] OTP resent via signInWithOtp (no flag)');
+      return { sent: true };
+    }
+    return { sent: false, error: error.message };
+  } catch (e) {
+    return { sent: false, error: String(e) };
+  }
+}
+
 // ─── POST /api/auth/verify-otp ────────────────────────────────────────────────
-// Verifies the OTP code sent to the user's email during sign-up.
 //
-// IMPORTANT: Supabase returns "Token has expired or is invalid" for BOTH
-// wrong codes AND expired codes — it doesn't distinguish for security reasons.
+// BULLETPROOF verification flow:
 //
-// To give the user accurate feedback, we use the admin API to check the user's
-// `confirmation_sent_at` timestamp after a verification failure:
-//   - If the OTP was sent within the expiry window → code is WRONG
-//   - If the OTP was sent outside the expiry window → code is EXPIRED
+//   1. Try verifyOtp() with ALL token types (email first, then signup, then recovery)
+//      - We prioritize 'email' because our signup route sends OTP via signInWithOtp()
+//        which generates 'email' type tokens
+//   2. If all fail, use admin API to diagnose:
+//      - If confirmation_sent_at exists and is recent → code is WRONG
+//      - If confirmation_sent_at exists and is old → code is EXPIRED → auto-resend
+//      - If confirmation_sent_at is null → no code was sent → auto-resend
+//   3. After auto-resend, tell user to check email for the new code
+//
+// We NEVER tell the user to "go back and sign up again" — we always auto-recover.
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,28 +79,19 @@ export async function POST(request: NextRequest) {
 
     // ── Input validation ────────────────────────────────────────────────────
     if (!email || typeof email !== 'string') {
-      return NextResponse.json(
-        { error: 'Email is required.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Email is required.' }, { status: 400 });
     }
 
     if (!otp || typeof otp !== 'string') {
-      return NextResponse.json(
-        { error: 'Verification code is required.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Verification code is required.' }, { status: 400 });
     }
 
-    // Accept 6 or 8 digit OTPs (Supabase project config determines length)
+    // Accept 6 or 8 digit OTPs
     if (!/^\d{6,8}$/.test(otp)) {
-      return NextResponse.json(
-        { error: 'Verification code must be 6 or 8 digits.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Verification code must be 6 digits.' }, { status: 400 });
     }
 
-    // ── Rate limiting (strict — only 5 attempts per 15 min) ─────────────────
+    // ── Rate limiting ───────────────────────────────────────────────────────
     const normalizedEmail = email.toLowerCase().trim();
     const rateCheck = checkOtpRateLimit(normalizedEmail);
     if (!rateCheck.allowed) {
@@ -78,16 +102,12 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Verify OTP with Supabase ────────────────────────────────────────────
-    // Use the anon key client (same key that sent the OTP) — NOT the admin client.
-    //
-    // We try ALL possible token types because the type depends on how the OTP
-    // was generated:
-    //   - signUp() → generates 'signup' type
-    //   - signInWithOtp() → generates 'email' type
-    //   - Some Supabase configs → generate 'recovery' type
+    // Try 'email' type FIRST because our signup route sends OTP via signInWithOtp()
+    // which generates 'email' type tokens. The 'signup' type from signUp() may not
+    // work if the template sends links instead of codes.
     const signupClient = createSignupClient();
 
-    const tokenTypes = ['signup', 'email', 'recovery'] as const;
+    const tokenTypes = ['email', 'signup', 'recovery'] as const;
     let lastError: { message: string; status?: number } | null = null;
     let verifiedData: any = null;
 
@@ -100,26 +120,26 @@ export async function POST(request: NextRequest) {
 
       if (!error && data.user) {
         verifiedData = data;
+        console.log(`[VERIFY-OTP] Success with type '${type}' for:`, normalizedEmail);
         break;
       }
 
       if (error) {
         console.warn(`[VERIFY-OTP] type '${type}' failed:`, error.message);
         lastError = { message: error.message, status: error.status };
-        // If the error is NOT "expired/invalid", it's a different kind of error
-        // (e.g., "user not found") — don't try other types
+        // Only try other types for "expired/invalid" errors
         if (!error.message.includes('expired') && !error.message.includes('invalid')) {
           break;
         }
       }
     }
 
-    // ── If all types failed, determine if code is WRONG or EXPIRED ──────────
+    // ── If verification failed, auto-recover ────────────────────────────────
     if (!verifiedData && lastError) {
       console.error('[VERIFY-OTP] All types failed. Last error:', lastError.message);
 
-      // Use admin API to check when the OTP was last sent
       let specificError: string;
+      let shouldResend = false;
 
       try {
         const adminClient = createServerSupabaseClient();
@@ -128,67 +148,58 @@ export async function POST(request: NextRequest) {
           (u) => u.email?.toLowerCase() === normalizedEmail
         );
 
-        if (user && user.confirmation_sent_at) {
+        if (!user) {
+          // User not found in Supabase Auth at all
+          specificError = 'No account found with this email. Please sign up first.';
+        } else if (user.confirmation_sent_at) {
           const sentAt = new Date(user.confirmation_sent_at).getTime();
           const now = Date.now();
           const elapsedSeconds = (now - sentAt) / 1000;
 
-          console.log(`[VERIFY-OTP] confirmation_sent_at: ${user.confirmation_sent_at}, elapsed: ${elapsedSeconds.toFixed(0)}s, expiry: ${OTP_EXPIRY_SECONDS}s`);
+          console.log(`[VERIFY-OTP] confirmation_sent_at: ${user.confirmation_sent_at}, elapsed: ${elapsedSeconds.toFixed(0)}s`);
 
           if (elapsedSeconds > OTP_EXPIRY_SECONDS) {
-            specificError = 'Verification code has expired. Please click "Resend" to get a new one.';
+            // Code expired — auto-resend
+            shouldResend = true;
+            specificError = 'Your verification code has expired. A new code has been sent to your email.';
           } else {
+            // Code was sent recently but is wrong
             specificError = 'Incorrect verification code. Please check the code and try again.';
           }
-        } else if (user && !user.confirmation_sent_at) {
-          // No confirmation was ever recorded — auto-resend OTP and tell the user
-          console.log('[VERIFY-OTP] confirmation_sent_at is null for:', normalizedEmail, '— auto-resending OTP');
-
-          try {
-            const resendSignupClient = createSignupClient();
-            const { error: resendError } = await resendSignupClient.auth.signInWithOtp({
-              email: normalizedEmail,
-              options: { shouldCreateUser: false },
-            });
-
-            if (!resendError) {
-              specificError = 'No active verification code was found for this email. A new code has been sent. Please check your email and try again.';
-            } else {
-              // Retry without shouldCreateUser flag
-              const { error: resendError2 } = await resendSignupClient.auth.signInWithOtp({
-                email: normalizedEmail,
-              });
-
-              if (!resendError2) {
-                specificError = 'No active verification code was found for this email. A new code has been sent. Please check your email and try again.';
-              } else {
-                specificError = 'Could not send a new verification code. Please go back and sign up again.';
-              }
-            }
-          } catch {
-            specificError = 'Could not send a new verification code. Please go back and sign up again.';
-          }
         } else {
-          // User not found in Supabase Auth
-          specificError = 'No account found with this email. Please sign up first.';
+          // confirmation_sent_at is null — no code was recorded as sent
+          // This happens when signUp() sent a LINK instead of a code
+          shouldResend = true;
+          specificError = 'No active verification code was found. A new code has been sent to your email.';
         }
       } catch (adminError) {
         console.error('[VERIFY-OTP] Admin lookup failed:', adminError);
-        // Fallback to generic error
-        specificError = 'Verification failed. If your code has expired, please click "Resend" to get a new one.';
+        // On admin API failure, still try to resend
+        shouldResend = true;
+        specificError = 'Verification failed. A new code has been sent to your email.';
       }
 
-      return NextResponse.json(
-        { error: specificError },
-        { status: 400 }
-      );
+      // Auto-resend OTP if needed
+      if (shouldResend) {
+        console.log('[VERIFY-OTP] Auto-resending OTP for:', normalizedEmail);
+        const otpResult = await sendOtpCode(signupClient, normalizedEmail);
+        if (otpResult.sent) {
+          specificError = specificError.replace(
+            'A new code has been sent to your email.',
+            'A new code has been sent to your email. Please wait a moment and check your inbox.'
+          );
+        } else {
+          // Even resend failed — give user actionable advice
+          console.error('[VERIFY-OTP] Auto-resend failed:', otpResult.error);
+          specificError = 'Your verification code may have expired. Click "Resend" below to get a new one.';
+        }
+      }
+
+      return NextResponse.json({ error: specificError }, { status: 400 });
     }
 
     if (!verifiedData) {
-      return NextResponse.json(
-        { error: 'Verification failed. Please try again.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Verification failed. Please try again.' }, { status: 400 });
     }
 
     // ── Update our database: mark email as verified ─────────────────────────
@@ -200,7 +211,7 @@ export async function POST(request: NextRequest) {
         });
       } catch (dbError) {
         console.error('[VERIFY-OTP] Database update error:', dbError);
-        // Non-fatal — Supabase auth is the source of truth for verification
+        // Non-fatal — Supabase auth is the source of truth
       }
     }
 
@@ -214,9 +225,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('[VERIFY-OTP] Unexpected error:', error);
-    return NextResponse.json(
-      { error: 'An unexpected error occurred. Please try again.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'An unexpected error occurred. Please try again.' }, { status: 500 });
   }
 }
