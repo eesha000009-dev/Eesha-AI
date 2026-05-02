@@ -80,23 +80,23 @@ export default function Home() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Canvas background — draws ALL visual effects */}
+      {/* CSS gradient background */}
       <SmokyBackground />
 
-      {/* Sidebar — semi-transparent so effects glow through */}
+      {/* Sidebar */}
       <Sidebar />
 
-      {/* Main content area — TRANSPARENT background so canvas shows through */}
+      {/* Main content area — borderless, transparent */}
       <div className="relative flex min-w-0 flex-1 flex-col overflow-hidden" style={{ zIndex: 1 }}>
-        {/* Header bar — borderless, minimal glass */}
-        <div className="flex h-12 shrink-0 items-center justify-between bg-transparent px-4 backdrop-blur-md">
+        {/* Header bar — nearly invisible */}
+        <div className="flex h-11 shrink-0 items-center justify-between bg-transparent border-b border-transparent px-4">
           <Header />
           <div className="flex items-center gap-1">
-            {/* </> toggle — cycles: closed → workspace → terminal → closed */}
+            {/* Panel toggle */}
             <Button
               variant="ghost"
               size="icon"
-              className={`size-8 ${hasSidePanel ? 'bg-white/10 dark:bg-white/10 text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent'}`}
+              className={`size-7 ${hasSidePanel ? 'text-foreground/60' : 'text-foreground/20 hover:text-foreground/50'}`}
               onClick={() => {
                 if (!hasSidePanel) {
                   setShowWorkspace(true);
@@ -110,18 +110,18 @@ export default function Home() {
               title={!hasSidePanel ? 'Open Workspace' : showWorkspace ? 'Switch to Terminal' : 'Close Panel'}
             >
               {!hasSidePanel ? (
-                <Code2 className="size-4" />
+                <Code2 className="size-3.5" />
               ) : showWorkspace ? (
-                <Terminal className="size-4" />
+                <Terminal className="size-3.5" />
               ) : (
-                <Code2 className="size-4" />
+                <Code2 className="size-3.5" />
               )}
             </Button>
             {hasSidePanel && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="size-8 text-muted-foreground hover:text-foreground hover:bg-accent"
+                className="size-7 text-foreground/20 hover:text-foreground/50"
                 onClick={() => { setShowWorkspace(false); setShowTerminal(false); }}
                 title="Close Panel"
               >
@@ -131,12 +131,12 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Main content area — responsive */}
+        {/* Main content area — responsive, borderless */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          {/* Chat panel — TRANSPARENT so effects show through */}
+          {/* Chat panel */}
           <div className={`flex flex-col min-w-0 overflow-hidden ${
             hasSidePanel
-              ? 'w-full sm:w-1/2 border-r border-[var(--border-subtle)]'
+              ? 'w-full sm:w-1/2'
               : 'flex-1'
           }`}>
             {hasMessages ? (
@@ -152,28 +152,25 @@ export default function Home() {
             <InputArea onSend={sendMessage} onStop={stopStreaming} isStreaming={isStreaming} />
           </div>
 
-          {/* Side panel area — responsive, borderless dividers */}
+          {/* Side panel area — desktop */}
           {hasSidePanel && (
-            <div className="hidden sm:flex flex-col w-1/2 min-w-0 overflow-hidden">
-              {/* Workspace only */}
+            <div className="hidden sm:flex flex-col w-1/2 min-w-0 overflow-hidden border-l border-[var(--border-subtle)]">
               {showWorkspace && !showTerminal && (
                 <div className="flex flex-1 min-h-0 overflow-hidden">
                   <div className="w-52 shrink-0 overflow-hidden"><FileExplorer /></div>
-                  <div className="flex-1 min-w-0 overflow-hidden"><CodeEditor /></div>
+                  <div className="flex-1 min-w-0 overflow-hidden border-l border-[var(--border-subtle)]"><CodeEditor /></div>
                 </div>
               )}
 
-              {/* Terminal only */}
               {showTerminal && !showWorkspace && (
                 <div className="flex-1 min-h-0 overflow-hidden"><TerminalPanel /></div>
               )}
 
-              {/* Both workspace and terminal */}
               {showWorkspace && showTerminal && (
                 <>
                   <div className="flex flex-1 min-h-0 overflow-hidden">
                     <div className="w-44 shrink-0 overflow-hidden"><FileExplorer /></div>
-                    <div className="flex-1 min-w-0 overflow-hidden"><CodeEditor /></div>
+                    <div className="flex-1 min-w-0 overflow-hidden border-l border-[var(--border-subtle)]"><CodeEditor /></div>
                   </div>
                   <div className="h-48 shrink-0 border-t border-[var(--border-subtle)] overflow-hidden">
                     <TerminalPanel />
@@ -185,7 +182,7 @@ export default function Home() {
 
           {/* Mobile: Side panel as overlay */}
           {hasSidePanel && (
-            <div className="sm:hidden fixed inset-0 top-12 z-50 bg-background/95 backdrop-blur-md">
+            <div className="sm:hidden fixed inset-0 top-11 z-50 bg-background/95 backdrop-blur-md">
               <div className="flex flex-col h-full">
                 {showWorkspace && !showTerminal && (
                   <div className="flex flex-1 min-h-0 overflow-hidden">

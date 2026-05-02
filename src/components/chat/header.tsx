@@ -11,26 +11,24 @@ export function Header() {
   const showTitle = activeConversation && activeConversationId;
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       {!sidebarOpen && (
         <>
           <Button
             variant="ghost"
             size="icon"
-            className="size-8 text-muted-foreground hover:text-foreground hover:bg-accent"
+            className="size-7 text-foreground/20 hover:text-foreground/50"
             onClick={() => setSidebarOpen(true)}
           >
-            <PanelLeft className="size-4" />
+            <PanelLeft className="size-3.5" />
           </Button>
-          <img src="/splash-screen.png" alt="Eesha AI" className="h-8 w-auto object-contain" />
+          <img src="/splash-screen.png" alt="Eesha AI" className="h-6 w-auto object-contain opacity-40" />
         </>
       )}
       {showTitle && (
-        <>
-          <h1 className="max-w-[300px] sm:max-w-[400px] truncate text-sm font-light text-muted-foreground">
-            {activeConversation.title}
-          </h1>
-        </>
+        <h1 className="max-w-[300px] sm:max-w-[400px] truncate text-[13px] font-normal text-foreground/30">
+          {activeConversation.title}
+        </h1>
       )}
     </div>
   );
