@@ -22,6 +22,8 @@ const RATE_LIMITS: Record<string, { windowMs: number; maxRequests: number; anonM
   chat: { windowMs: 60_000, maxRequests: 20, anonMaxRequests: 5 },
   // Conversations: authenticated 60/min, anonymous 30/min
   conversations: { windowMs: 60_000, maxRequests: 60, anonMaxRequests: 30 },
+  // Messages: authenticated 120/min, anonymous 60/min (higher limit for message persistence)
+  messages: { windowMs: 60_000, maxRequests: 120, anonMaxRequests: 60 },
   // Workspace: authenticated 30/min, anonymous 10/min
   workspace: { windowMs: 60_000, maxRequests: 30, anonMaxRequests: 10 },
   // Terminal: authenticated only — anonymous CANNOT access
@@ -43,6 +45,8 @@ const FREE_TIER_COOKIE = "eesha-free-credits";
 
 function getEndpointType(pathname: string): string {
   if (pathname.startsWith("/api/chat")) return "chat";
+  // Messages endpoint: /api/conversations/[id]/messages — must check before general conversations
+  if (/^\/api\/conversations\/[^/]+\/messages/.test(pathname)) return "messages";
   if (pathname.startsWith("/api/conversations")) return "conversations";
   if (pathname.startsWith("/api/workspace")) return "workspace";
   if (pathname.startsWith("/api/terminal")) return "terminal";
@@ -206,6 +210,12 @@ export async function middleware(request: NextRequest) {
     return addSecurityHeaders(response);
   }
 
+  // ── Conversation page routes: /c/[id] — allow with security headers ──
+  if (pathname.startsWith("/c/")) {
+    const response = NextResponse.next();
+    return addSecurityHeaders(response);
+  }
+
   // ── NextAuth routes: pass through with security headers ──
   if (pathname.startsWith("/api/auth/[...nextauth]")) {
     const response = NextResponse.next();
@@ -291,6 +301,14 @@ export async function middleware(request: NextRequest) {
       return NextResponse.json(
         { error: "EMAIL_NOT_VERIFIED", message: "Please verify your email to access the terminal. Check your inbox for the verification code." },
         { status: 403 }
+      );
+    }
+
+    // Messages endpoint: require authentication — anonymous users cannot persist messages
+    if (endpointType === "messages" && !isAuthenticated) {
+      return NextResponse.json(
+        { error: "SIGN_IN_REQUIRED", message: "Message persistence requires sign-in." },
+        { status: 401 }
       );
     }
 

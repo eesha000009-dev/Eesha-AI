@@ -3,10 +3,11 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useChatStore, ThemeMode, Conversation, ChatMode } from '@/stores/chat-store';
-import { Plus, MessageSquare, Trash2, PanelLeftClose, Search, Settings, X, Sun, Moon, Monitor, LogOut, User, LogIn, Sparkles, Code2, Image, Heart } from 'lucide-react';
+import { Plus, MessageSquare, Trash2, PanelLeftClose, Search, Settings, X, Sun, Moon, Monitor, LogOut, User, Code2, Image, Heart, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +40,34 @@ const MODE_LABELS: Record<ChatMode, string> = {
   iluma: 'iluma',
   health: 'Health',
   chat: 'Chat',
+};
+
+const MODE_DESCRIPTIONS: Record<ChatMode, string> = {
+  code: 'AI coding agents',
+  iluma: 'Create images',
+  health: 'Health & wellness',
+  chat: 'General assistant',
+};
+
+const MODE_ACTIVE_COLORS: Record<ChatMode, string> = {
+  code: 'text-violet-400',
+  iluma: 'text-emerald-400',
+  health: 'text-rose-400',
+  chat: 'text-amber-400',
+};
+
+const MODE_HOVER_BG: Record<ChatMode, string> = {
+  code: 'hover:bg-violet-500/5',
+  iluma: 'hover:bg-emerald-500/5',
+  health: 'hover:bg-rose-500/5',
+  chat: 'hover:bg-amber-500/5',
+};
+
+const MODE_ACTIVE_BG: Record<ChatMode, string> = {
+  code: 'bg-violet-500/10',
+  iluma: 'bg-emerald-500/10',
+  health: 'bg-rose-500/10',
+  chat: 'bg-amber-400/10',
 };
 
 function groupConversationsByDate(conversations: Conversation[]) {
@@ -97,6 +126,9 @@ function ThemeToggle() {
   );
 }
 
+// ─── All chat modes for navigation ──────────────────────────────────────────────
+const CHAT_MODES: ChatMode[] = ['code', 'iluma', 'health', 'chat'];
+
 export function Sidebar() {
   const {
     conversations,
@@ -110,14 +142,25 @@ export function Sidebar() {
   } = useChatStore();
 
   const { data: session } = useSession();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
 
+  // Filter conversations to match active mode
   const filteredConversations = useMemo(() => {
-    if (!searchQuery.trim()) return conversations;
-    const q = searchQuery.toLowerCase();
-    return conversations.filter((c) => c.title.toLowerCase().includes(q));
-  }, [conversations, searchQuery]);
+    let filtered = conversations;
+
+    // Filter by active mode
+    filtered = filtered.filter((c) => (c.mode || 'code') === activeMode);
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((c) => c.title.toLowerCase().includes(q));
+    }
+
+    return filtered;
+  }, [conversations, activeMode, searchQuery]);
 
   const grouped = useMemo(
     () => groupConversationsByDate(filteredConversations),
@@ -126,7 +169,19 @@ export function Sidebar() {
 
   const handleNewChat = () => {
     setActiveConversation(null);
-    // Mode is already set by activeMode — new chat will inherit it
+    router.push('/');
+  };
+
+  const handleModeNavClick = (mode: ChatMode) => {
+    setActiveMode(mode);
+    setActiveConversation(null);
+    router.push('/');
+  };
+
+  const handleConversationClick = (conv: Conversation) => {
+    setActiveConversation(conv.id);
+    if (conv.mode) setActiveMode(conv.mode);
+    router.push(`/c/${conv.id}`);
   };
 
   const handleDelete = async () => {
@@ -138,6 +193,10 @@ export function Sidebar() {
         body: JSON.stringify({ id: deleteTarget.id }),
       });
       deleteConversation(deleteTarget.id);
+      // If we deleted the active conversation, go home
+      if (activeConversationId === deleteTarget.id) {
+        router.push('/');
+      }
     } catch {
       // silently fail
     }
@@ -164,7 +223,7 @@ export function Sidebar() {
         )}
       </AnimatePresence>
 
-      {/* Sidebar panel — tighter, Linear-quality spacing */}
+      {/* Sidebar panel */}
       <motion.aside
         initial={false}
         animate={{ width: sidebarOpen ? 260 : 0, opacity: sidebarOpen ? 1 : 0 }}
@@ -175,7 +234,7 @@ export function Sidebar() {
         style={{ maxWidth: sidebarOpen ? 260 : 0 }}
       >
         <div className="flex h-full w-[260px] flex-col">
-          {/* Header with branding — compact */}
+          {/* Header with branding */}
           <div className="flex items-center justify-between px-3 py-2.5">
             <img src="/splash-screen.png" alt="Eesha AI" className="h-10 w-auto object-contain" />
             <Button
@@ -188,7 +247,7 @@ export function Sidebar() {
             </Button>
           </div>
 
-          {/* New Chat button — subtle, just + and text */}
+          {/* New Chat button */}
           <div className="px-3 pb-2">
             <button
               onClick={handleNewChat}
@@ -199,8 +258,49 @@ export function Sidebar() {
             </button>
           </div>
 
+          {/* Separator */}
+          <div className="mx-3 border-t border-[var(--border-subtle)]" />
+
+          {/* Mode Navigation Section */}
+          <div className="px-2 py-2">
+            <div className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-foreground/20">
+              Modes
+            </div>
+            <div className="space-y-0.5">
+              {CHAT_MODES.map((mode) => {
+                const isActive = activeMode === mode;
+                return (
+                  <button
+                    key={mode}
+                    onClick={() => handleModeNavClick(mode)}
+                    className={`group flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-all duration-150 ${
+                      isActive
+                        ? `${MODE_ACTIVE_COLORS[mode]} ${MODE_ACTIVE_BG[mode]} font-medium`
+                        : `text-foreground/40 ${MODE_HOVER_BG[mode]} hover:text-foreground/70`
+                    }`}
+                  >
+                    <ModeIcon mode={mode} className="size-4" />
+                    <span>{MODE_LABELS[mode]}</span>
+                    {isActive && (
+                      <motion.div
+                        layoutId="sidebar-mode-indicator"
+                        className="ml-auto flex items-center"
+                        transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
+                      >
+                        <Sparkles className="size-3 opacity-50" />
+                      </motion.div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Separator */}
+          <div className="mx-3 border-t border-[var(--border-subtle)]" />
+
           {/* Search — compact */}
-          <div className="px-3 pb-2">
+          <div className="px-3 py-2">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 size-3 -translate-y-1/2 text-foreground/20" />
               <input
@@ -221,7 +321,7 @@ export function Sidebar() {
             </div>
           </div>
 
-          {/* Conversation List — tighter spacing */}
+          {/* Conversation List — filtered by active mode */}
           <ScrollArea className="flex-1 px-2">
             <div className="py-0.5">
               {grouped.map((group) => (
@@ -232,11 +332,7 @@ export function Sidebar() {
                   {group.conversations.map((conv) => (
                     <button
                       key={conv.id}
-                      onClick={() => {
-                        setActiveConversation(conv.id);
-                        // Switch to the conversation's mode when clicking it
-                        if (conv.mode) setActiveMode(conv.mode);
-                      }}
+                      onClick={() => handleConversationClick(conv)}
                       className={`group relative flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-all duration-150 ${
                         activeConversationId === conv.id
                           ? 'sidebar-item-active text-foreground'
@@ -261,14 +357,14 @@ export function Sidebar() {
               {filteredConversations.length === 0 && (
                 <div className="px-3 py-6 text-center">
                   <p className="text-[11px] text-foreground/20">
-                    {searchQuery ? 'No matching conversations' : 'No conversations yet'}
+                    {searchQuery ? 'No matching conversations' : `No ${MODE_LABELS[activeMode]} conversations yet`}
                   </p>
                 </div>
               )}
             </div>
           </ScrollArea>
 
-          {/* Footer — refined, compact */}
+          {/* Footer */}
           <div className="border-t border-[var(--border-subtle)] px-3 py-2.5">
             <div className="mb-2">
               <ThemeToggle />

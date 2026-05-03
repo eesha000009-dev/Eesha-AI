@@ -28,6 +28,7 @@ export function useChat() {
     resetAgentStatuses,
     addImageToMessage,
     setActiveMode,
+    setActiveConversation,
   } = useChatStore();
 
   const refreshFiles = useWorkspaceStore((s) => s.refreshFiles);
@@ -39,13 +40,38 @@ export function useChat() {
 
   const FREE_TIER_MAX = 5;
 
+  // ─── Persist a message to the database ───────────────────────────────────────
+  const persistMessage = useCallback(
+    async (conversationId: string, role: string, content: string, thinking?: string) => {
+      // Only persist for authenticated users with real (non-anonymous) conversation IDs
+      if (!session?.user) return;
+      if (conversationId.startsWith('anon-') || conversationId.startsWith('temp-')) return;
+
+      try {
+        await fetch(`/api/conversations/${conversationId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role, content, thinking }),
+        });
+      } catch {
+        // Silently fail — message is still in local state
+      }
+    },
+    [session?.user]
+  );
+
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, modeOverride?: string) => {
       setError(null);
       if (!content.trim()) return;
 
       let conversationId = activeConversationId;
-      const mode = useChatStore.getState().activeMode;
+      const mode = (modeOverride as ChatMode) || useChatStore.getState().activeMode;
+
+      // If a mode override is provided, switch to it
+      if (modeOverride && modeOverride !== useChatStore.getState().activeMode) {
+        setActiveMode(modeOverride as ChatMode);
+      }
 
       if (!conversationId) {
         try {
@@ -57,6 +83,11 @@ export function useChat() {
           const conv = await res.json();
           conversationId = conv.id;
           addConversation({ ...conv, mode, messages: [] });
+
+          // Navigate to the conversation URL
+          if (!conv._anonymous && !conv.id.startsWith('temp-')) {
+            router.push(`/c/${conv.id}`);
+          }
         } catch {
           setError('Failed to create conversation');
           return;
@@ -75,6 +106,9 @@ export function useChat() {
         createdAt: new Date().toISOString(),
       };
       addMessage(conversationId, userMessage);
+
+      // Persist user message to database
+      persistMessage(conversationId, 'user', content);
 
       // ─── iluma mode: Image generation (non-streaming) ──────────────
       if (mode === 'iluma') {
@@ -115,19 +149,21 @@ export function useChat() {
 
           if (data.image) {
             addImageToMessage(conversationId, data.image);
-            updateLastAssistantMessage(
-              conversationId,
-              `Generated image for: "${content.slice(0, 100)}"`
-            );
+            const assistantContent = `Generated image for: "${content.slice(0, 100)}"`;
+            updateLastAssistantMessage(conversationId, assistantContent);
+
+            // Persist assistant message to database
+            persistMessage(conversationId, 'assistant', assistantContent);
           }
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Failed to generate image';
           console.error('iluma error:', msg);
           setError(msg);
-          updateLastAssistantMessage(
-            conversationId,
-            'I encountered an issue generating the image. Please try again.'
-          );
+          const errorMessage = 'I encountered an issue generating the image. Please try again.';
+          updateLastAssistantMessage(conversationId, errorMessage);
+
+          // Persist error message to database
+          persistMessage(conversationId, 'assistant', errorMessage);
         } finally {
           setIsStreaming(false);
         }
@@ -220,6 +256,7 @@ export function useChat() {
 
         const decoder = new TextDecoder();
         let fullContent = '';
+        let fullThinking = '';
         let toolExecuted = false;
         let sseBuffer = '';
 
@@ -261,6 +298,11 @@ export function useChat() {
                 updateLastAssistantMessage(conversationId, fullContent);
               }
 
+              // ── Thinking streaming ───────────────────────────────────
+              if (eventType === 'thinking' && parsed.content) {
+                fullThinking += parsed.content;
+              }
+
               // ── Tool execution events (code mode only) ────────────────
               if (eventType === 'tool_start' && isCodeMode) {
                 toolExecuted = true;
@@ -297,6 +339,11 @@ export function useChat() {
           refreshFiles();
         }
 
+        // Persist the final assistant message to database
+        if (fullContent) {
+          persistMessage(conversationId, 'assistant', fullContent, fullThinking || undefined);
+        }
+
         // Update title on first message
         const currentConv = useChatStore.getState().conversations.find(
           (c) => c.id === conversationId
@@ -324,10 +371,11 @@ export function useChat() {
         );
         const lastMsg = currentConv?.messages[currentConv.messages.length - 1];
         if (!lastMsg?.content || lastMsg.content.trim() === '') {
-          updateLastAssistantMessage(
-            conversationId,
-            'I encountered an issue processing your request. Please try again.'
-          );
+          const errorMessage = 'I encountered an issue processing your request. Please try again.';
+          updateLastAssistantMessage(conversationId, errorMessage);
+
+          // Persist error message
+          persistMessage(conversationId, 'assistant', errorMessage);
         }
       } finally {
         setIsStreaming(false);
@@ -336,7 +384,7 @@ export function useChat() {
         abortControllerRef.current = null;
       }
     },
-    [activeConversationId, activeMode, addConversation, addMessage, updateLastAssistantMessage, setIsStreaming, updateConversationTitle, refreshFiles, setDeliberating, setAgentStatus, resetAgentStatuses, addImageToMessage, router]
+    [activeConversationId, activeMode, addConversation, addMessage, updateLastAssistantMessage, setIsStreaming, updateConversationTitle, refreshFiles, setDeliberating, setAgentStatus, resetAgentStatuses, addImageToMessage, router, setActiveMode, setActiveConversation, persistMessage, session?.user]
   );
 
   const stopStreaming = useCallback(() => {
